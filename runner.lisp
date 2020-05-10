@@ -180,7 +180,7 @@ adds the ERROR and a stack trace to the test RUN."
                    (output-stream     test-run-output-stream)
                    (output-text       test-run-output-text)) run
     (setf checks-count *checks-count*
-          failed-conditions *failed-conditions*)
+          failed-conditions (reverse *failed-conditions*))
     (test-run-stop-time run)
     (cond (error-condition
            (setf error error-condition
