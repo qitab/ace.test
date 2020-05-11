@@ -1,4 +1,4 @@
-;;; The test runner runs //lisp/test google.test.deftest tests.
+;;; The test runner runs //lisp/test ace.test.deftest tests.
 ;;;
 ;;; run-tests - will run all the tests and return whether tests pass.
 ;;; deregister-tests - removes unit tests from the active list based on a selector.
@@ -8,7 +8,6 @@
 ;;;
 
 (defpackage #:ace.test.runner
-  (:nicknames #:google.test.runner)
   (:use #:common-lisp #:ace.core)
   (:import-from #:ace.core.thread
                 #:join-thread
@@ -16,16 +15,16 @@
                 #:with-timeout
                 #:make-mutex
                 #:with-mutex)
-  (:import-from #:google.core.tty
+  (:import-from #:ace.core.tty
                 #:ttyp
                 #:*print-ansi*)
-  (:import-from #:google.core.os
+  (:import-from #:ace.core.os
                 #:getenv)
-  (:import-from #:google.core.macro
+  (:import-from #:ace.core.macro
                 #:eval-always)
-  (:import-from #:google.core.etc
+  (:import-from #:ace.core.etc
                 #:defglobal!)
-  (:import-from #:google.core.hook
+  (:import-from #:ace.core.hook
                 #:define-hook-function)
   (:import-from #:ace.core.check.condition
                 #:failed

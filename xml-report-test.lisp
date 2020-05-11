@@ -1,16 +1,16 @@
-;;; Test for google.test.xml-report.
+;;; Test for ace.test.xml-report.
 ;;;
 ;;; cllint: disable=line-length
 
-(defpackage #:google.test.xml-report-test
-  (:use #:common-lisp #:google.test)
-  (:import-from #:google.test.runner
+(defpackage #:ace.test.xml-report-test
+  (:use #:common-lisp #:ace.test)
+  (:import-from #:ace.test.runner
                 #:test-run
                 #:make-test-run)
-  (:import-from #:google.test.xml-report
+  (:import-from #:ace.test.xml-report
                 #:print-tests-report))
 
-(in-package #:google.test.xml-report-test)
+(in-package #:ace.test.xml-report-test)
 
 
 (deftest print-tests-report-no-failure-test ()
@@ -28,8 +28,8 @@
 
     (check (equal xml "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <testsuites name=\"xml-report-test\" tests=\"1\">
-<testsuite name=\"GOOGLE.TEST.XML-REPORT-TEST\" tests=\"1\" failures=\"0\" errors=\"0\" time=\"0.666\">
-  <testcase name=\"PRINT-TESTS-REPORT-TEST\" status=\"run\" classname=\"GOOGLE.TEST.XML-REPORT-TEST\" time=\"0.666\">
+<testsuite name=\"ACE.TEST.XML-REPORT-TEST\" tests=\"1\" failures=\"0\" errors=\"0\" time=\"0.666\">
+  <testcase name=\"PRINT-TESTS-REPORT-TEST\" status=\"run\" classname=\"ACE.TEST.XML-REPORT-TEST\" time=\"0.666\">
   <system-out><![CDATA[foo]]></system-out>
   <properties>
    <property name=\"lisp-function\" value=\"http://cs/PRINT-TESTS-REPORT-TEST\" />
@@ -62,8 +62,8 @@
 
     (check (equal xml "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <testsuites name=\"xml-report-test\" tests=\"1\">
-<testsuite name=\"GOOGLE.TEST.XML-REPORT-TEST\" tests=\"1\" failures=\"0\" errors=\"1\" time=\"0.666\">
-  <testcase name=\"PRINT-TESTS-REPORT-TEST\" status=\"run\" classname=\"GOOGLE.TEST.XML-REPORT-TEST\" time=\"0.666\">
+<testsuite name=\"ACE.TEST.XML-REPORT-TEST\" tests=\"1\" failures=\"0\" errors=\"1\" time=\"0.666\">
+  <testcase name=\"PRINT-TESTS-REPORT-TEST\" status=\"run\" classname=\"ACE.TEST.XML-REPORT-TEST\" time=\"0.666\">
     <error message=\"foo
  bar
  baz\" type=\"SIMPLE-ERROR\">
@@ -104,8 +104,8 @@ foo
 
     (check (equal xml "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <testsuites name=\"xml-report-test\" tests=\"1\">
-<testsuite name=\"GOOGLE.TEST.XML-REPORT-TEST\" tests=\"1\" failures=\"1\" errors=\"0\" time=\"0.666\">
-  <testcase name=\"PRINT-TESTS-REPORT-TEST\" status=\"run\" classname=\"GOOGLE.TEST.XML-REPORT-TEST\" time=\"0.666\">
+<testsuite name=\"ACE.TEST.XML-REPORT-TEST\" tests=\"1\" failures=\"1\" errors=\"0\" time=\"0.666\">
+  <testcase name=\"PRINT-TESTS-REPORT-TEST\" status=\"run\" classname=\"ACE.TEST.XML-REPORT-TEST\" time=\"0.666\">
     <failure message=\"foo
  bar
  baz\" type=\"SIMPLE-ERROR\">

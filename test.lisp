@@ -8,9 +8,8 @@
 ;;;
 
 (defpackage #:ace.test
-  (:nicknames #:google.test)
   (:use #:cl #:ace.core #:ace.core.macro)
-  (:import-from #:google.test.runner
+  (:import-from #:ace.test.runner
                 #:*unit-tests*
                 #:run-tests
                 #:order

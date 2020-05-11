@@ -5,15 +5,15 @@
 ;;; XML_OUTPUT_FILE specified in the environment.
 ;;;
 
-(defpackage #:google.test.xml-report
+(defpackage #:ace.test.xml-report
   (:use #:common-lisp)
   #+sbcl
   (:import-from #:sb-posix #:getenv)
-  (:import-from #:google.core.string
+  (:import-from #:ace.core.string
                 #:search-replace)
   (:import-from #:ace.core.macro
                 #:function-file-path)
-  (:import-from #:google.test.runner
+  (:import-from #:ace.test.runner
                 #:with-sane-io-syntax
                 #:report-tests
                 #:test-run
@@ -25,7 +25,7 @@
                 #:test-run-failed-conditions
                 #:test-run-real-time))
 
-(in-package #:google.test.xml-report)
+(in-package #:ace.test.xml-report)
 
 (defun xml-special-char-p (c)
   "True if `C' is one of the XML characters that need to be escaped."

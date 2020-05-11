@@ -1,13 +1,13 @@
-;;; Test for google.test.sharding.
+;;; Test for ace.test.sharding.
 ;;;
 
-(defpackage #:google.test.sharding-test
-  (:use #:common-lisp #:google.test)
+(defpackage #:ace.test.sharding-test
+  (:use #:common-lisp #:ace.test)
   (:import-from #:ace.test.runner
                 ace.test.runner:make-schedule
                 ace.test.runner::*unit-tests*))
 
-(in-package #:google.test.sharding-test)
+(in-package #:ace.test.sharding-test)
 
 (deftest test1 :order t ()
   (format t "TEST1 sharded here.~%")

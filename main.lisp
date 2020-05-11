@@ -4,16 +4,16 @@
 ;;; cllint:disable=prefer-logging
 ;;;
 
-(google.core.package:defpackage* :google.test.main
+(ace.core.package:defpackage* :ace.test.main
   (:use :cl)
-  (:use-alias #:google.core.thread
+  (:use-alias #:ace.core.thread
               #:google.flag))
 
-(in-package :google.test.main)
+(in-package :ace.test.main)
 
 (defun start-timeout-watcher ()
   "Runs a watcher for TIMEOUT minus 5 sec. and prints stack traces if not dead."
-  (let ((timeout (google.test.runner:timeout)))
+  (let ((timeout (ace.test.runner:timeout)))
     (when (and timeout (> timeout 5))
       (flet ((timeout-watcher ()
                (sleep (- timeout 5))
@@ -47,7 +47,7 @@ If ABORT is true, the process exits recklessly without cleaning up."
   (google:init (flag:parse-command-line :args (append (flag:command-line)
                                                                    '("--logtostderr"))))
   (start-timeout-watcher)
-  (unless (zerop (google.test.runner:run-and-report-tests))
+  (unless (zerop (ace.test.runner:run-and-report-tests))
     (exit :status -1))
   (format *error-output* "INFO: Exiting with ~D thread~:p remaining.~%"
           (length (thread:all-threads)))

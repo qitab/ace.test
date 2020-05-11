@@ -6,15 +6,15 @@
 ;;;  cllint: disable=invalid-assert
 ;;;
 
-(defpackage #:google.test.sharding
+(defpackage #:ace.test.sharding
   (:use #:cl #:ace.core)
   #+sbcl
   (:import-from #:sb-posix #:getenv)
-  (:import-from #:google.test.runner
-                google.test.runner:order
-                google.test.runner:make-schedule))
+  (:import-from #:ace.test.runner
+                ace.test.runner:order
+                ace.test.runner:make-schedule))
 
-(in-package #:google.test.sharding)
+(in-package #:ace.test.sharding)
 
 (defun fixed-order-p (test) (integerp (get test 'order)))
 

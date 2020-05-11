@@ -16,12 +16,12 @@ lisp_test(
 )
 ```
 
-Then use the `google.test` package. This gives an access to the `deftest` macro
+Then use the `ace.test` package. This gives an access to the `deftest` macro
 to define a tests and `expect` or `check` to implement test assertions:
 
 ```lisp
 (defpackage #:foo-test
-  (:use #:common-lisp #:google.test #:foo))
+  (:use #:common-lisp #:ace.test #:foo))
 
 (in-package #:foo-test)
 

@@ -2,9 +2,9 @@
 ;;; Test the unit test package...
 ;;;
 
-(cl:defpackage #:google.test-test
-  (:use #:common-lisp #:google.test)
-  (:import-from #:google.test.runner
+(cl:defpackage #:ace.test-test
+  (:use #:common-lisp #:ace.test)
+  (:import-from #:ace.test.runner
                 #:*checks-count*
                 #:*failed-conditions*
                 #:*unit-tests*
@@ -13,7 +13,7 @@
                 #:order
                 #:sort-tests))
 
-(cl:in-package #:google.test-test)
+(cl:in-package #:ace.test-test)
 
 ;;;  CHECK and EXPECT are tested with this functionality.
 ;;;  cllint: disable=invalid-assert
@@ -128,7 +128,7 @@
     (expect nil "Expect failure outside of deftest")
     (assert (> *checks-count* 0))
     (assert *failed-conditions*)
-    (assert (= 1 (google.test.runner:run-and-report-tests
+    (assert (= 1 (ace.test.runner:run-and-report-tests
                   :out dev/null :verbose nil)))))
 
 (defun %main ()
