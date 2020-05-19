@@ -1,3 +1,9 @@
+;;; Copyright 2020 Google LLC
+;;;
+;;; Use of this source code is governed by an MIT-style
+;;; license that can be found in the LICENSE file or at
+;;; https://opensource.org/licenses/MIT.
+
 ;;; A plug-in for the //list/test:runner sharding the tests.
 ;;;
 ;;; This package contains a hook for test runner `MAKE-SCHEDULE' that

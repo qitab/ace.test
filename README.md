@@ -33,3 +33,5 @@ When running the tests from Blaze one can limit the execution to specific test
 names with the [`--test_filter`](https://docs.bazel.build/versions/master/command-line-reference.html)
 option. For Lisp, that takes a value of test function names, comma-separated,
 with or without package prefix (go/testfilter).
+
+### Disclaimer: This is not an official Google product.

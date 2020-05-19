@@ -1,3 +1,9 @@
+;;; Copyright 2020 Google LLC
+;;;
+;;; Use of this source code is governed by an MIT-style
+;;; license that can be found in the LICENSE file or at
+;;; https://opensource.org/licenses/MIT.
+
 ;;; The test runner runs //lisp/test ace.test.deftest tests.
 ;;;
 ;;; run-tests - will run all the tests and return whether tests pass.
