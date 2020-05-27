@@ -126,6 +126,17 @@
   (assert (= 1 (length *failed-conditions*)))
   (setf *failed-conditions* nil))
 
+(deftest parse-deftest-options-test ()
+  (multiple-value-bind (order timeout args body)
+      (ace.test::parse-deftest-options
+       '(:timeout 5 :order 3 (&optional foo bar baz)
+         "a docstring"
+         (expect (= 0 0))))
+    (expect (= timeout 5))
+    (expect (= order 3))
+    (expect (equal args '(&optional foo bar baz)))
+    (expect (equal body '("a docstring" (expect (= 0 0)))))))
+
 (defun report-unknown-failures ()
   (let ((dev/null (make-broadcast-stream))
         (*checks-count* 0)
@@ -144,6 +155,7 @@
   (assert (member 'assert-failure-test *unit-tests*))
   (assert (member 'expect-macro-error-test *unit-tests*))
   (assert (member 'assert-macro-error-test *unit-tests*))
+  (assert (member 'parse-deftest-options-test *unit-tests*))
 
   (assert (get 'assert-error-test 'order))
 
@@ -165,6 +177,7 @@
                      assert-failure-test
                      assert-macro-error-test
                      expect-macro-error-test
+                     parse-deftest-options-test
                      signalsp-test     ; 1
                      assert-error-test))) ; t
 
@@ -178,7 +191,8 @@
                        letf*-test
                        assert-failure-test
                        assert-macro-error-test
-                       expect-macro-error-test)
+                       expect-macro-error-test
+                       parse-deftest-options-test)
                      middle))
       (assert (equal '(signalsp-test     ; 1
                        assert-error-test) ; t
@@ -201,10 +215,11 @@
   (with-mock-functions-test3)
   (letf*-test)
   (report-unknown-failures)
+  (parse-deftest-options-test)
 
   (multiple-value-bind (all failed) (%run-tests :debug nil :verbose t)
     (declare (list all failed))
     (let ((all-count (length all))
           (fail-count (length failed)))
-      (assert (= all-count 11))
+      (assert (= all-count 12))
       (assert (= fail-count 1)))))

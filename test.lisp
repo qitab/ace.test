@@ -73,7 +73,7 @@ Parameters:
              t)
             (:timeout
              (pop options-args-body)
-             (setf order (pop options-args-body))
+             (setf timeout (pop options-args-body))
              t)))
     (setf args (pop options-args-body)
           body options-args-body)
