@@ -202,6 +202,12 @@ call into the real functions.
 WITH-MOCK-FUNCTIONS is protected by a recursive mutex and runs serially
 wrt. other WITH-MOCK-FUNCTIONS.
 
+Note that WITH-MOCK-FUNCTIONS overrides the function definition temporarily.
+In SBCL the override may not be propagated to all threads in a timely manner.
+I.e. access to a function definition is not atomic or synchronized
+and your tests will be flaky if you expect that other running threads will
+pick up the changes in a timely manner magically.
+
 Use WITH-MOCK-FUNCTIONS as a last resort when there is no way to change
 the code and to provide test hooks or proper test interfaces."
   (loop :for (function) :in bindings :do
