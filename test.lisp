@@ -220,18 +220,19 @@ the code and to provide test hooks or proper test interfaces."
             "Overriding a function with a source transforms ~S will not work."
             function))
   (let ((fvars (lmap ((f) bindings) `(,(gensym* f) #',f))))
-    `(let ,fvars ;; Save the functions under gensym vars.
-       (declare (function ,@(mapcar #'car fvars)))
-       ;; Declare the real functions with the specified name (R)
-       (flet ,(lconc ((g) fvars) ((f v r) bindings)
-                (and r `((,r (&rest args) (apply ,g args)))))
-         ;; Use LETF* to override the (FDEFINITION ...) place
-         ;; with new value (V)
-         ;; and revert it using the old value (G) later.
-         (letf* ,(lmap ((f v) bindings)
-                       ((g)   fvars)
-                  `((fdefinition ',f) ,v ,g))
-           ,@body)))))
+    `(with-recursive-lock-held (*unsafe-code-test-mutex*)
+       (let ,fvars ;; Save the functions under gensym vars.
+         (declare (function ,@(mapcar #'car fvars)))
+         ;; Declare the real functions with the specified name (R)
+         (flet ,(lconc ((g) fvars) ((f v r) bindings)
+                       (and r `((,r (&rest args) (apply ,g args)))))
+           ;; Use LETF* to override the (FDEFINITION ...) place
+           ;; with new value (V)
+           ;; and revert it using the old value (G) later.
+           (letf* ,(lmap ((f v) bindings)
+                         ((g)   fvars)
+                         `((fdefinition ',f) ,v ,g))
+             ,@body))))))
 
 (defmacro with-mock-functions* (bindings &body body)
   "Executes the BODY with the functions mocked in BINDINGS.
