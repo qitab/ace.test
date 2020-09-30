@@ -103,6 +103,8 @@
                    (failed-conditions test-run-failed-conditions)
                    (output-text       test-run-output-text)
                    (time              test-run-real-time)) status
+    (print "QQQ")
+    (print test)
     (with-sane-io-syntax
       (let* ((package (symbol-package test))
              (package-name (and package (package-name package)))
