@@ -13,7 +13,7 @@
 (ace.core.package:defpackage* :ace.test.main
   (:use :cl)
   (:use-alias #:ace.core.thread
-              #:google.flag))
+              #+google3 #:google.flag))
 
 (in-package :ace.test.main)
 
