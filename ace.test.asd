@@ -22,6 +22,23 @@
   :author "Lisp Community"
   :license "MIT"
   :depends-on (bordeaux-threads closer-mop trivial-garbage ace.core)
+  :in-order-to ((test-op (test-op :ace.test/tests)))
   :serial t
   :components
   #.(loop for f in *files* collect `(:file ,f)))
+
+(defsystem :ace.test/tests
+  :name "ace.test tests"
+  :version "1.0"
+  :licence "MIT"
+  :description      "Test code for ace.test"
+  :long-description "Test code for ace.test"
+  :depends-on (:ace.core)
+  :serial t
+  :pathname ""
+  :components
+  ((:file "test-test"))
+  :perform (test-op
+            (o c)
+            (uiop:symbol-call '#:ace.test-test
+                              '#:run-tests)))

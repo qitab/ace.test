@@ -1,5 +1,7 @@
 # Lisp Test Runner
 
+![SBCL-Tests](https://github.com/cybersurf/ace.test/workflows/SBCL-Tests/badge.svg)
+
 This library is a test runner for `lisp_test` rules. To use it, just define a
 `lisp_test` rule which has `//lisp/test` in its deps:
 
