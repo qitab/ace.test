@@ -33,7 +33,7 @@ jobs:
       - name: Download ace.core
         uses: actions/checkout@v2
         with:
-          repository: cybersurf/ace.core
+          repository: qitab/ace.core
           path: quicklisp/local-projects/ace.core
 
       - name: Load and run tests
