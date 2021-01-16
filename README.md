@@ -36,4 +36,6 @@ names with the [`--test_filter`](https://docs.bazel.build/versions/master/comman
 option. For Lisp, that takes a value of test function names, comma-separated,
 with or without package prefix (go/testfilter).
 
+This is a test
+
 ### Disclaimer: This is not an official Google product.
