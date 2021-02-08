@@ -1,6 +1,7 @@
 # Lisp Test Runner
 
 ![SBCL-Tests](https://github.com/qitab/ace.test/workflows/SBCL-Tests/badge.svg)
+[![Gitter](https://badges.gitter.im/qitab/community.svg)](https://gitter.im/qitab/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 This library is a test runner for `lisp_test` rules. To use it, just define a
 `lisp_test` rule which has `//lisp/test` in its deps:
