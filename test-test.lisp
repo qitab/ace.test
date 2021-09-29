@@ -53,14 +53,14 @@
 
 (defun plus (a b) (+ a b))
 
-(deftest with-mock-functions-test :order nil ()
+(deftest with-mock-functions-test ()
   (with-mock-functions
       ((minus #'plus)
        (plus (lambda (a b) (* a b))))
     (expect (= 6 (minus 3 3)))
     (expect (= 9 (plus 3 3)))))
 
-(deftest with-mock-functions-test2 :order nil ()
+(deftest with-mock-functions-test2 ()
   (with-mock-functions
       ((plus #'minus)
        (minus (lambda (a b) (* a b))))
@@ -70,7 +70,7 @@
 (defvar *foo*)
 (defun (setf foo) (v) (setf *foo* v))
 
-(deftest with-mock-functions-test3 :order nil ()
+(deftest with-mock-functions-test3 ()
   "Test that with-mock-functions can mock (setf ...) accessors."
   (let (*foo* bar)
     (with-mock-functions (((setf foo) (lambda (v) (setf bar v))))
@@ -78,7 +78,7 @@
       (expect (null *foo*))
       (expect (eq :bar bar)))))
 
-(deftest with-mock-functions-test4 :order nil ()
+(deftest with-mock-functions-test4 ()
   (with-mock-functions
       ((minus #'plus real-minus)
        (plus (lambda (a b) (real-minus (* a b) a)) real-plus))
@@ -91,7 +91,7 @@
 (defun bar () *bar*)
 (defun (setf bar) (v) (setf *bar* v))
 
-(deftest letf*-test :order nil  ()
+(deftest letf*-test ()
   (let ((a 'a) *bar* (c 'c))
     (letf* ((a 1)
             ((bar) 4)
@@ -103,7 +103,7 @@
     (expect (eq c 'c))
     (expect (not *bar*))))
 
-(deftest assert-failure-test :order nil ()
+(deftest assert-failure-test ()
   ;; Intentionally errors out.
   (check (not "EVER-PASSES")))
 
@@ -111,12 +111,12 @@
   (check-type a string)
   `(format nil "*~A*" ,a))
 
-(deftest assert-macro-error-test :order nil ()
+(deftest assert-macro-error-test ()
   (assert-macro-error (accepts-string 10))
   (assert-error
     (assert-macro-error (accetps-string "10"))))
 
-(deftest expect-macro-error-test :order nil ()
+(deftest expect-macro-error-test ()
   (assert (null *failed-conditions*))
   ;; Intentionally errors out.
   (expect-macro-error (accepts-string "10"))
@@ -126,7 +126,7 @@
   (assert (= 1 (length *failed-conditions*)))
   (setf *failed-conditions* nil))
 
-(deftest parse-deftest-options-test :order nil ()
+(deftest parse-deftest-options-test ()
   (multiple-value-bind (order timeout args body)
       (ace.test::parse-deftest-options
        '(:timeout 5 :order 3 (&optional foo bar baz)

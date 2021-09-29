@@ -64,7 +64,7 @@ Parameters:
 
 (defun parse-deftest-options (options-args-body)
   "Returns (values order timeout args body) parsed out of OPTIONS-ARGS-BODY."
-  (let ((order t) timeout args body)
+  (let (order timeout args body)
     (loop :while
           (case (car options-args-body)
             (:order
@@ -88,18 +88,14 @@ Parameters:
 Parameters:
  `OPTIONS-ARGS-BODY' - [:order ORDER|:timeout TIMEOUT]* (ARGS*) BODY.
  `ARGS' is a lambda list with only optional, keyword, or rest arguments.
- `ORDER' indicates controls the order of tests and whether the test can
-  run at the same time as other tests.
+ `ORDER' indicates that the test cannot run at the same time as other tests.
+ `ORDER' can be T or a number.
 
-  Tests are run in the following order:
-   `ORDER' negative: Run one at a time, from most-negative to least-negative.
-   `ORDER' NIL: run in parallel with any other ORDER: NIL tests.
-   `ORDER' positive: Run one at a time from least-positive to most-positive.
-   `ORDER' T: Run one at a time.
-
-  TIMEOUT' specifies the maxim time given to a test in seconds.
-
-  A deftest fails if an error is signalled from within."
+Negative `ORDER' indicates tests executed before parallel tests.
+Positive `ORDER' indicates tests executed after parallel tests.
+And T indicates tests executed last.
+`TIMEOUT' specifies the maxim time given to a test in seconds.
+A deftest fails if an error is signalled from within."
   (check-type name symbol)
   (multiple-value-bind (order timeout args body)
       (parse-deftest-options options-args-body)
