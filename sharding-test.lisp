@@ -39,7 +39,7 @@
     (expect (equal '() parallel))
     (expect (equal '(test3) epilogue))))
 
-(deftest test4 ()
+(deftest test4 :order nil ()
   (format t "TEST4 sharded here.~%")
   (multiple-value-bind (prologue parallel epilogue)
       (make-schedule *unit-tests*)
@@ -47,7 +47,7 @@
     (expect (equal '(test4 test5) parallel))
     (expect (equal '() epilogue))))
 
-(deftest test5 ()
+(deftest test5 :order nil ()
   (format t "TEST5 sharded here.~%")
   (multiple-value-bind (prologue parallel epilogue)
       (make-schedule *unit-tests*)
@@ -55,7 +55,7 @@
     (expect (equal '(test4 test5) parallel))
     (expect (equal '() epilogue))))
 
-(deftest test6 ()
+(deftest test6 :order nil ()
   (format t "TEST6 sharded here.~%")
   (multiple-value-bind (prologue parallel epilogue)
       (make-schedule *unit-tests*)
