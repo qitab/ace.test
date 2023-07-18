@@ -8,7 +8,7 @@
 ;;;
 
 (defpackage #:ace.test.sharding-test
-  (:use #:common-lisp #:ace.test)
+  (:use #:ace.test #:common-lisp)
   (:import-from #:ace.test.runner
                 ace.test.runner:make-schedule
                 ace.test.runner::*unit-tests*))

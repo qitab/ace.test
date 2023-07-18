@@ -9,7 +9,7 @@
 ;;; cllint: disable=line-length
 
 (defpackage #:ace.test.xml-report-test
-  (:use #:common-lisp #:ace.test)
+  (:use #:ace.test #:common-lisp)
   (:import-from #:ace.test.runner
                 #:test-run
                 #:make-test-run)

@@ -14,7 +14,7 @@
 ;;;
 
 (defpackage #:ace.test
-  (:use #:cl #:ace.core #:ace.core.macro)
+  (:use #:ace.core #:ace.core.macro #:cl)
   (:import-from #:ace.test.runner
                 #:*unit-tests*
                 #:run-tests

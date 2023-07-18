@@ -14,7 +14,7 @@
 ;;;
 
 (defpackage #:ace.test.runner
-  (:use #:common-lisp #:ace.core)
+  (:use #:ace.core #:common-lisp)
   (:import-from #:ace.core.thread
                 #:join-thread
                 #:make-thread

@@ -13,7 +13,7 @@
 ;;;
 
 (defpackage #:ace.test.sharding
-  (:use #:cl #:ace.core)
+  (:use #:ace.core #:cl)
   #+sbcl
   (:import-from #:sb-posix #:getenv)
   (:import-from #:ace.test.runner
