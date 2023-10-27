@@ -92,31 +92,30 @@
             ;; NOP is required by the framework - otherwise fails.
             (return-from make-schedule (values '(nop) nil nil)))
 
-          (loop
-            :for list.rest :on test-lists
-            :for len :in lengths
-            :do
-            (cond ((>= shard-start len)
-                   ;; Skip.
-                   (setf (car list.rest) nil)
-                   (decf shard-start len))
-                  ((< (+ shard-start shard-size) len)
-                   ;; Found the rest of the shard in this list.
-                   (setf (car list.rest)
-                         (subseq (car list.rest)
-                                 shard-start
-                                 (+ shard-start shard-size))
-                         shard-start 0
-                         shard-size 0))
-                  (t
-                   ;; Found a part of the shard in this list.
-                   (decf shard-size (- len shard-start))
-                   (setf (car list.rest)
-                         (nthcdr shard-start (car list.rest))
-                         shard-start 0))))
-          (assert (zerop shard-start))
-          (assert (zerop shard-size))
-          (return-from make-schedule (values-list test-lists)))))
+
+          ;; Loop over the test lists, and then the tests within each list,
+          ;; assigning each test into a different shard round-robin.  Once
+          ;; each shard has the same number of tests, the MOD will cause us
+          ;; to loop back to the first shard again.  We then only collect
+          ;; the tests that are assigned to our SHARD-INDEX.
+          (let* ((i 0) ; I gets incremented for each test, without regard to
+                       ; which TEST-LIST it is in.
+                 (result
+                  (loop :for test-list :in test-lists
+                        :collect
+                        ;; The outer loop essentially filters the input
+                        ;; TEST-LISTS.  It will return the same number of
+                        ;; sublists as it started with, and each list will
+                        ;; contain a subset of the input sublist.
+                        (loop :for test :in test-list
+                              :for index = (mod i total-shards)
+                              :do (incf i)
+                              :when (= shard-index index)
+                                ;; The inner loop collects up the subset of
+                                ;; the tests in TEST-LIST that map to our
+                                ;; SHARD-INDEX
+                                :collect test))))
+            (return-from make-schedule (values-list result))))))
     (if (and shard-index (plusp shard-index))
         ;; All tests run on first shard.
         (values '(nop) nil nil)
