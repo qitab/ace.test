@@ -55,6 +55,9 @@ If ABORT is true, the process exits recklessly without cleaning up."
   (start-timeout-watcher)
   (unless (zerop (ace.test.runner:run-and-report-tests))
     (exit :status -1))
+  #+sbcl (sb-alien:with-alien ((empty-thread-recyclebin (function sb-alien:void) :extern))
+           (sb-thread:%dispose-thread-structs) ; avoid false "leak" errors from ASAN
+           (sb-alien:alien-funcall empty-thread-recyclebin))
   (format *error-output* "INFO: Exiting with ~D thread~:p remaining.~%"
           (length (thread:all-threads)))
   (exit :timeout 10))
