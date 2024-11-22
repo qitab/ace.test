@@ -187,8 +187,8 @@
     ;; Additional info can be found here:
     
     (when xml-output
+      (ignore-errors (delete-file xml-output))
       (with-open-file (out xml-output :direction :output
                                       :element-type 'character
-                                      :external-format :utf-8
-                                      :if-exists :supersede)
+                                      :external-format :utf-8)
         (print-tests-report test-cases out)))))
