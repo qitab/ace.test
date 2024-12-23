@@ -10,10 +10,10 @@
 ;;; cllint:disable=prefer-logging
 ;;;
 
-(ace.core.package:defpackage* :ace.test.main
+(defpackage :ace.test.main
   (:use :cl)
-  (:use-alias #:ace.core.thread
-              #+google3 #:ace.flag))
+  (:local-nicknames (#:thread #:ace.core.thread)
+                    #+google3 (#:flag #:ace.flag)))
 
 (in-package :ace.test.main)
 
