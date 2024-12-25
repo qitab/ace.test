@@ -28,8 +28,6 @@
                 #:getenv)
   (:import-from #:ace.core.macro
                 #:eval-always)
-  (:import-from #:ace.core.etc
-                #:defglobal!)
   (:import-from #:ace.core.hook
                 #:define-hook-function)
   (:import-from #:ace.core.check.condition
@@ -68,7 +66,7 @@
 (defvar *failed-conditions* nil
   "The list of failed condition objects. Bound by RUN-TEST to NIL.")
 
-(defglobal! *failed-conditions-mutex* (make-mutex "failed-conditions-mutex.")
+(defvar *failed-conditions-mutex* (make-mutex "failed-conditions-mutex.")
   "Protects the *failed-conditions*.")
 
 ;; Hook up to CHECK and EXPECT to get the proper counts.
