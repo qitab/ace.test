@@ -20,11 +20,6 @@
                 #:run-tests
                 #:order
                 #:timeout)
-  ;; Use bordeaux-threads to minimize dependencies
-  ;; TODO(czak): Move to mocks.lisp.
-  (:import-from #:bordeaux-threads
-                #:make-recursive-lock
-                #:with-recursive-lock-held)
   (:export
    ;; Testing utilities.
    #:signals
@@ -161,6 +156,13 @@ Example:
 
 ;;;
 ;;; Convenience for testing bad/unsafe legacy code that depends on global state.
+
+(defun make-recursive-lock (name)
+  #+sbcl (sb-thread:make-mutex :name name)
+  #-sbcl (bordeaux-threads:make-recursive-lock name))
+(defmacro with-recursive-lock-held ((lock) &body body)
+  #+sbcl `(sb-thread:with-recursive-lock (,lock) ,@body)
+  #-sbcl `(bordeaux-threads:with-recursive-lock-held (,lock) ,@body))
 
 (defvar *unsafe-code-test-mutex* (make-recursive-lock "UNSAFE-CODE-TEST-MUTEX")
   "Used to serialize tests that mutate global space.")
