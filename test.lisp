@@ -20,11 +20,8 @@
                 #:run-tests
                 #:order
                 #:timeout)
-  ;; Use bordeaux-threads to minimize dependencies
-  ;; TODO(czak): Move to mocks.lisp.
-  (:import-from #:bordeaux-threads
-                #:make-recursive-lock
-                #:with-recursive-lock-held)
+  #+bordeaux-threads
+  (:import-from #:bordeaux-threads #:make-recursive-lock #:with-recursive-lock-held)
   (:export
    ;; Testing utilities.
    #:signals
@@ -46,6 +43,12 @@
    #:run-tests))
 
 (in-package #:ace.test)
+
+#+(and sbcl (not bordeaux-threads))
+(progn
+  (defun make-recursive-lock (name) (sb-thread:make-mutex :name name))
+  (defmacro with-recursive-lock-held ((lock) &body body)
+    `(sb-thread:with-recursive-lock (,lock) ,@body)))
 
 ;;; Test utilities.
 
