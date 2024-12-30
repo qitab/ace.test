@@ -15,12 +15,6 @@
 
 (defpackage #:ace.test.runner
   (:use #:common-lisp #:ace.core)
-  (:import-from #:ace.core.thread
-                #:join-thread
-                #:make-thread
-                #:with-timeout
-                #:make-mutex
-                #:with-mutex)
   (:import-from #:ace.core.tty
                 #:ttyp
                 #:*print-ansi*)
@@ -35,6 +29,7 @@
                 #:missed
                 #:*on-missed-expectation*
                 #:alternate-truth-form)
+  (:import-from #+sbcl #:sb-ext #-sbcl #:bordeaux-threads #:timeout)
   (:export
    ;; Execution of tests.
    #:*checks-count*
@@ -47,10 +42,27 @@
    #:run-and-report-tests
    #:deregister-tests
    #:*debug-unit-tests*
-   #:timeout
+   ;; TIMEOUT is a symbol naming a condition, and it was confusing to also have it name a function,
+   ;; so the function is now named DEFAULT-TIMEOUT
+   #:default-timeout
    #:order))
 
 (in-package #:ace.test.runner)
+
+;;; Compatibility shims
+#+sbcl
+(progn
+  (eval-when (:compile-toplevel :load-toplevel :execute)
+    (import '(sb-thread:make-thread sb-thread:join-thread sb-thread:with-mutex)))
+  (defmacro with-timeout ((time) &body body) `(sb-ext:with-timeout ,time ,@body))
+  (defun make-mutex (name) (sb-thread:make-mutex :name name)))
+#-sbcl
+(progn
+  (eval-when (:compile-toplevel :load-toplevel :execute)
+    (import '(bordeaux-threads:make-thread bordeaux-threads:join-thread)))
+  (defun make-mutex (name) (bordeaux-threads:make-lock name))
+  (defmacro with-mutex ((lock) &body body) `(bordeaux-threads:with-lock-held (,lock) ,@body))
+  (defmacro with-timeout (&whole form) `(bordeaux-threads:with-timeout ,@(cdr form))))
 
 ;;; Test execution.
 
@@ -326,7 +338,7 @@ Returns true if there was no error."
         (test-run-start-time run)
         (handler-bind ((missed #'on-warning)
                        (error #'on-error)
-                       (bordeaux-threads:timeout #'on-error))
+                       (timeout #'on-error))
           (loop do
             (with-simple-restart (retry "Retry ~S" test)
               (return
@@ -336,7 +348,7 @@ Returns true if there was no error."
                     (funcall (symbol-function test)))))))
         (update-test-run run)))))
 
-(defun timeout ()
+(defun default-timeout ()
   "Return a value for the default test timeout in seconds."
   ;; The test timeout is provided by blaze test in the TEST_TIMEOUT variable.
   ;; See: http://bazel.build/docs/test-encyclopedia.html
@@ -450,7 +462,7 @@ If PARALLEL is NIL, the PARALLEL tests will be empty."))
                (let* ((run (make-test-run
                             :test test
                             :parallel (and parallel (not (get test 'order)))
-                            :timeout (get test 'timeout (timeout))
+                            :timeout (get test 'timeout (default-timeout))
                             :output-stream (make-string-output-stream)))
                       (package (symbol-package test))
                       (name (format nil "~@[~A::~]~A"
@@ -563,6 +575,9 @@ If PARALLEL is NIL, the PARALLEL tests will be empty."))
   (prog1
     (report-tests (%run-tests :debug nil :verbose verbose :out out) :out out)
     ;; Cleanup Lisp-gc managed c-objects so asan doesn't complain
+    ;; This GC call assumes that cleanups are synchronous with completion of GC,
+    ;; but we've seen ASAN complains anyway as it requires lots of other help.
+    ;; So probably just remove this after further testing.
     (trivial-garbage:gc :full t)))
 
 (defun deregister-tests (&optional (select :all))

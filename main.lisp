@@ -17,15 +17,25 @@
 
 (in-package :ace.test.main)
 
+;;; Compatibility shims
+#+sbcl
+(progn
+  (eval-when (:compile-toplevel :load-toplevel :execute)
+    (import '(sb-thread:make-thread)))
+  (defun all-threads () (sb-thread:list-all-threads)))
+#-sbcl
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (import '(bordeaux-threads:make-thread bordeaux-threads:all-threads)))
+
 (defun start-timeout-watcher ()
   "Runs a watcher for TIMEOUT minus 5 sec. and prints stack traces if not dead."
-  (let ((timeout (ace.test.runner:timeout)))
+  (let ((timeout (ace.test.runner:default-timeout)))
     (when (and timeout (> timeout 5))
       (flet ((timeout-watcher ()
                (sleep (- timeout 5))
                (format *error-output* "INFO: The test is about to timeout.~%")
                (thread:print-backtraces)))
-        (thread:make-thread #'timeout-watcher :name "Timeout-Watcher")))))
+        (make-thread #'timeout-watcher :name "Timeout-Watcher")))))
 
 #+google3
 (flag:define ace.test.runner::*parallel* t
@@ -66,6 +76,5 @@ If ABORT is true, the process exits recklessly without cleaning up."
            (sb-thread:%dispose-thread-structs)
            ;; - thread structures (not threads) awaiting reuse in the recycle list
            (sb-alien:alien-funcall empty-thread-recyclebin))
-  (format *error-output* "INFO: Exiting with ~D thread~:p remaining.~%"
-          (length (thread:all-threads)))
+  (format *error-output* "INFO: Exiting with ~D thread~:p remaining.~%" (length (all-threads)))
   (exit :timeout 10))

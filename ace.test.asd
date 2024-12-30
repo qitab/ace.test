@@ -21,7 +21,8 @@
   :version "1.0"
   :author "Lisp Community"
   :license "MIT"
-  :depends-on (bordeaux-threads closer-mop trivial-garbage ace.core)
+  ;; FIXME: does it still need closer-mop?
+  :depends-on (#-sbcl bordeaux-threads closer-mop trivial-garbage ace.core)
   :in-order-to ((test-op (test-op :ace.test/tests)))
   :serial t
   :components
