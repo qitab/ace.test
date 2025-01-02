@@ -13,8 +13,7 @@
 (defpackage :ace.test.main
   (:use :cl)
   #+bordeaux-threads (:import-from #:bordeaux-threads #:make-thread #:all-threads)
-  (:local-nicknames (#:thread #:ace.core.thread)
-                    #+google3 (#:flag #:ace.flag)))
+  (:local-nicknames #+google3 (#:flag #:ace.flag)))
 
 (in-package :ace.test.main)
 
@@ -31,7 +30,12 @@
       (flet ((timeout-watcher ()
                (sleep (- timeout 5))
                (format *error-output* "INFO: The test is about to timeout.~%")
-               (thread:print-backtraces)))
+               #+sbcl
+               (let ((*print-pretty* nil))
+                 (dolist (pair (sb-debug:backtrace-all-threads))
+                   ;; No need for a backtrace of the timeout watcher
+                   (unless (eq (car pair) sb-thread:*current-thread*)
+                     (format *debug-io* "~&Backtrace for ~A:~%~A~%" (car pair) (cdr pair)))))))
         (make-thread #'timeout-watcher :name "Timeout-Watcher")))))
 
 #+google3
