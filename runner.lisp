@@ -22,8 +22,6 @@
                 #:getenv)
   (:import-from #:ace.core.macro
                 #:eval-always)
-  (:import-from #:ace.core.hook
-                #:define-hook-function)
   (:import-from #:ace.core.check.condition
                 #:failed
                 #:missed
@@ -37,7 +35,7 @@
    #:make-schedule
    #:nothing-tested
    #:run-tests
-   #:report-tests
+   #:*reporting-hooks*
    #:run-and-report-tests
    #:deregister-tests
    #:*debug-unit-tests*
@@ -538,12 +536,12 @@ If PARALLEL is NIL, the PARALLEL tests will be empty."))
               all-count check-count failed-count))
     (zerop failed-count))))
 
-(define-hook-function report-tests (tests &key out)
-  :documentation
-  "Called to report the TESTS from RUN-AND-REPORT-TESTS. The TESTS is a list of TEST-RUN objects.
- OUT specifies the default output stream to which the report is printed.")
-
-(defmethod report-tests print-summary-and-failures (tests &key (out *error-output*))
+(defvar *reporting-hooks* nil "User-specified final report functions")
+(defun report-tests (tests &key (out *error-output*))
+  (dolist (hook *reporting-hooks*)
+    (handler-case (funcall hook tests :out out)
+      (:no-error (&rest vals) (values-list vals))
+      (error (e) (format t "Caught [~A] while trying to run reporting hook" e))))
   (let ((fail-count (count-if #'test-run-error tests))
         (all-count (length tests))
         (checks-count (loop for test-run in tests sum (test-run-checks-count test-run))))
