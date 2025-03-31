@@ -21,7 +21,6 @@
                 #:function-file-path)
   (:import-from #:ace.test.runner
                 #:with-sane-io-syntax
-                #:report-tests
                 #:test-run
                 #:test-run-test
                 #:test-run-error
@@ -178,7 +177,7 @@
   (group-and-print-test-cases test-cases :key #'test-package-name :out out)
   (format out "~&</testsuites>~%"))
 
-(defmethod report-tests dump-junit-xml-output (test-cases &key &allow-other-keys)
+(defun dump-junit-xml-output (test-cases &key &allow-other-keys)
   (let ((xml-output (getenv "XML_OUTPUT_FILE")))
     ;; This variable is specified here:
     
@@ -192,3 +191,4 @@
                                       :element-type 'character
                                       :external-format :utf-8)
         (print-tests-report test-cases out)))))
+(pushnew 'dump-junit-xml-output ace.test.runner:*reporting-hooks*)
