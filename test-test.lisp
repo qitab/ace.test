@@ -78,6 +78,13 @@
       (expect (null *foo*))
       (expect (eq :bar bar)))))
 
+;; On sbcl, with-mocked-functions does not permit exposing each original function to each
+;; mocked function. It's wrong (or at least incompatible) that the non-sbcl code does.
+;; If you were truly in need of that, you could capture all the functions thusly
+;; as local variables:
+;;   (LET ((original-fn-1 #'fn1) (original-fn2 #'fn2)) (WITH-MOCKED-FUNCTIONS ...))
+;; and use FUNCALL.
+#-sbcl
 (deftest with-mock-functions-test4 :order nil ()
   (with-mock-functions
       ((minus #'plus real-minus)

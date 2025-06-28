@@ -226,6 +226,18 @@ the code and to provide test hooks or proper test interfaces."
     (expect (not (function-has-transforms-p function))
             "Overriding a function with a source transforms ~S will not work."
             function))
+  #+sbcl
+  (loop for (name wrapper localname) in bindings
+        collect name into names
+        collect `(lambda (.f. &rest .args.)
+                   ,@(if localname ; user wants to call the underlying function
+                         `((flet ((,localname (&rest _) (apply (the function .f.) _)))
+                             (apply ,wrapper .args.)))
+                         `((declare (ignore .f.)) ; user doesn't want ...
+                           (apply ,wrapper .args.))))
+        into wrappers
+        finally (return `(call-with-mocks (lambda () ,@body) ',names ,@wrappers)))
+  #-sbcl
   (let ((fvars (lmap ((f) bindings) `(,(gensym* f) #',f))))
     `(with-recursive-lock-held (*unsafe-code-test-mutex*)
        (let ,fvars ;; Save the functions under gensym vars.
@@ -254,7 +266,29 @@ does not allow to specify the mock using a lambda or #'mock form.
 
 Use WITH-MOCK-FUNCTIONS* as a last resort when there is no way to change
 the code and to provide test hooks or proper test interfaces."
+  #+sbcl
+  (loop for (name lambdavars . forms) in bindings
+        collect name into names
+        collect `(lambda (_ ,@lambdavars) (declare (ignore _)) ,@forms) into wrappers
+        finally (return `(call-with-mocks (lambda () ,@body) ',names ,@wrappers)))
+  #-sbcl
   `(with-mock-functions
        ,(loop :for b :in bindings
               :collect `(,(first b) (lambda ,@(rest b))))
      ,@body))
+
+#+sbcl
+(defun call-with-mocks (thunk names &rest wrappers)
+  (sb-int:aver (= (length wrappers) (length names)))
+  (with-recursive-lock-held (*unsafe-code-test-mutex*)
+    (unwind-protect
+         (progn
+           (mapc (lambda (name wrapper)
+                   ;; This would have to gensym an identifier for the encapsulation
+                   ;; if we want to support mocking a mocked function.
+                   (sb-int:aver (not (sb-int:encapsulated-p name 'mock)))
+                   (sb-int:encapsulate name 'mock wrapper))
+                 names wrappers)
+           (funcall thunk))
+      (dolist (name names)
+        (sb-int:unencapsulate name 'mock)))))
