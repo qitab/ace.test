@@ -55,14 +55,14 @@
 
 (deftest with-mock-functions-test :order nil ()
   (with-mock-functions
-      ((minus #'plus)
+      ((minus (load-time-value #'plus))
        (plus (lambda (a b) (* a b))))
     (expect (= 6 (minus 3 3)))
     (expect (= 9 (plus 3 3)))))
 
 (deftest with-mock-functions-test2 :order nil ()
   (with-mock-functions
-      ((plus #'minus)
+      ((plus (load-time-value #'minus))
        (minus (lambda (a b) (* a b))))
     (expect (= 0 (plus 3 3)))
     (expect (= 9 (minus 3 3)))))
@@ -79,13 +79,15 @@
       (expect (eq :bar bar)))))
 
 (deftest with-mock-functions-test4 :order nil ()
-  (with-mock-functions
-      ((minus #'plus real-minus)
-       (plus (lambda (a b) (real-minus (* a b) a)) real-plus))
-    (expect (= 6 (minus 3 3)))
-    (expect (= 0 (real-minus 3 3)))
-    (expect (= 6 (plus 3 3)))
-    (expect (= 5 (real-plus 2 3)))))
+  (let ((real-plus (symbol-function 'plus))
+        (real-minus (symbol-function 'minus)))
+    (with-mock-functions
+        ((minus #'plus)
+         (plus (lambda (a b) (funcall real-minus (* a b) a))))
+      (expect (= 6 (minus 3 3)))
+      (expect (= 0 (funcall real-minus 3 3)))
+      (expect (= 6 (plus 3 3)))
+      (expect (= 5 (funcall real-plus 2 3))))))
 
 (defvar *bar*)
 (defun bar () *bar*)

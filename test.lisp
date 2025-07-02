@@ -194,8 +194,12 @@ the code and to provide test hooks or proper test interfaces."
         (setf ,@(mapcan #'list places gensyms)))
       `(,,@(lmap ((p v ov) clauses) (or ov p))))))
 
-;;; Mocks - TODO(czak): Move to mocks.lisp.
+;;; Mocks
 
+;;; Note: you should seldom if ever use the form of this macro which rebinds global names
+;;; to arbitrary local names. If needed, it's equivalent to writing your own LET bindings:
+;;;  (LET ((original-fn-1 #'fn1) (original-fn2 #'fn2)) (WITH-MOCKED-FUNCTIONS ...))
+;;; which have the further benefit of being unmistakable for a call to the wrong name.
 (defmacro with-mock-functions (bindings &body body &environment env)
   "Executes the BODY with the functions mocked in BINDINGS.
 Each BINDING is a
@@ -226,6 +230,17 @@ the code and to provide test hooks or proper test interfaces."
     (expect (not (function-has-transforms-p function))
             "Overriding a function with a source transforms ~S will not work."
             function))
+  #+sbcl
+  (loop for (name definition local) in bindings
+        collect name into names
+        collect `(lambda (.f. &rest .arglist.)
+                   (flet ((,(or local (setq local (make-symbol "_"))) (&rest r)
+                            (apply .f. r)))
+                     (declare (ignorable #',local))
+                     (apply (the function ,definition) .arglist.)))
+        into mocks
+        finally (return `(call-with-mocks (lambda () ,@body) ',names ,@mocks)))
+  #-sbcl
   (let ((fvars (lmap ((f) bindings) `(,(gensym* f) #',f))))
     `(with-recursive-lock-held (*unsafe-code-test-mutex*)
        (let ,fvars ;; Save the functions under gensym vars.
@@ -254,7 +269,28 @@ does not allow to specify the mock using a lambda or #'mock form.
 
 Use WITH-MOCK-FUNCTIONS* as a last resort when there is no way to change
 the code and to provide test hooks or proper test interfaces."
+  #+sbcl
+  (loop for (name lambdavars . forms) in bindings
+        collect name into names
+        collect `(lambda (_ ,@lambdavars) (declare (ignore _)) ,@forms) into wrappers
+        finally (return `(call-with-mocks (lambda () ,@body) ',names ,@wrappers)))
+  #-sbcl
   `(with-mock-functions
        ,(loop :for b :in bindings
               :collect `(,(first b) (lambda ,@(rest b))))
      ,@body))
+
+#+sbcl
+(defun call-with-mocks (thunk names &rest wrappers)
+  (sb-int:aver (= (length wrappers) (length names)))
+  (with-recursive-lock-held (*unsafe-code-test-mutex*)
+    (unwind-protect
+         (progn
+           (mapc (lambda (name wrapper)
+                   ;; Prevent mocked mocks. Too confusing who sees what
+                   (sb-int:aver (not (sb-int:encapsulated-p name 'mock)))
+                   (sb-int:encapsulate name 'mock wrapper))
+                 names wrappers)
+           (funcall thunk))
+      (dolist (name names)
+        (sb-int:unencapsulate name 'mock)))))
