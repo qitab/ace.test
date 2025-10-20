@@ -14,8 +14,7 @@
 
 (defpackage #:ace.test.sharding
   (:use #:cl #:ace.core)
-  #+sbcl
-  (:import-from #:sb-posix #:getenv)
+  (:import-from #:ace.core.os #:getenv)
   (:import-from #:ace.test.runner
                 ace.test.runner:order
                 ace.test.runner:make-schedule))
