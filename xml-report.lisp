@@ -13,8 +13,7 @@
 
 (defpackage #:ace.test.xml-report
   (:use #:common-lisp)
-  #+sbcl
-  (:import-from #:sb-posix #:getenv)
+  (:import-from #:ace.core.os #:getenv)
   (:import-from #:ace.core.string
                 #:search-replace)
   (:import-from #:ace.core.macro
