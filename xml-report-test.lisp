@@ -18,6 +18,8 @@
 
 (in-package #:ace.test.xml-report-test)
 
+(defun millisec-to-internal-time-units (millisec) "Convert MILLISEC to internal-time-units"
+  (ceiling (* millisec internal-time-units-per-second) 1000))
 
 (deftest print-tests-report-no-failure-test ()
   (let* ((run (make-test-run
@@ -28,7 +30,7 @@
                :checks-count 10
                :failed-conditions nil
                :real-time-start 0
-               :real-time-stop 666))
+               :real-time-stop (millisec-to-internal-time-units 666)))
          (xml (with-output-to-string (s)
                 (print-tests-report (list run) s))))
 
@@ -62,7 +64,7 @@
                :checks-count 10
                :failed-conditions nil
                :real-time-start 0
-               :real-time-stop 666))
+               :real-time-stop (millisec-to-internal-time-units 666)))
          (xml (with-output-to-string (s)
                 (print-tests-report (list run) s))))
 
@@ -104,7 +106,7 @@ foo
                (list (make-condition 'simple-error :format-control "foo~% bar~% baz")
                      (make-condition 'simple-warning :format-control "qux~% quax~% quaz"))
                :real-time-start 0
-               :real-time-stop 666))
+               :real-time-stop (millisec-to-internal-time-units 666)))
          (xml (with-output-to-string (s)
                 (print-tests-report (list run) s))))
 
