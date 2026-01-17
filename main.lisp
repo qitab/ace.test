@@ -45,10 +45,36 @@
    :type boolean
    :def nil)
 
+#+address-sanitizer
+(defun pre-exit-cleanups-for-asan ()
+  #-sbcl (error "No implementation of this for non-SBCL")
+  #+sbcl
+  (progn
+    ;; Lisp objects that manage C++ objects via a finalizer need to ensure
+    ;; that the finalizer executes. But just performing GC doesn't guarantee that
+    ;; because finalizers are asynchronous. That can be worked around by stopping
+    ;; the finalizer thread, then GCing and manually invoking finalizers.
+    (sb-impl::finalizer-thread-stop)
+    (sb-ext:gc :full t)
+    (sb-impl::run-pending-finalizers)
+    (sb-alien:with-alien ((asan-lisp-thread-cleanup (function sb-alien:void) :extern)
+                          (empty-thread-recyclebin (function sb-alien:void) :extern))
+      ;; avoid false "leak" errors from ASAN. There are three sets of thread
+      ;; structures to deal with:
+      ;; - threads still running at exit of the test suite
+      (sb-alien:alien-funcall asan-lisp-thread-cleanup)
+      ;; - threads ready to be pthread_joined, so effectively dead to Lisp
+      ;;   but whose pthread memory resources have not been released
+      (sb-thread:%dispose-thread-structs)
+      ;; - thread structures (not threads) awaiting reuse in the recycle list
+      (sb-alien:alien-funcall empty-thread-recyclebin))
+    t))
+
 (defun exit (&key (status 0) (timeout 60) abort)
   "Exit with STATUS, waiting at most TIMEOUT seconds for other threads.
 If ABORT is true, the process exits recklessly without cleaning up."
   (declare (ignorable timeout abort))
+  #+address-sanitizer (pre-exit-cleanups-for-asan)
   #+sbcl (sb-ext:exit :code status :abort abort :timeout timeout)
   #+ccl (ccl:quit status)
   #+clisp (ext:quit status)
@@ -59,23 +85,11 @@ If ABORT is true, the process exits recklessly without cleaning up."
 
 (defun cl-user::main ()
   "Default main for unit tests."
-  ;; TODO(czak): Fix the issues with InitGoogle.
   #+google3
   (google:init (flag:parse-command-line :args (append (flag:command-line)
                                                                    '("--logtostderr"))))
   (start-timeout-watcher)
   (unless (zerop (ace.test.runner:run-and-report-tests))
     (exit :status -1))
-  #+sbcl (sb-alien:with-alien ((asan-lisp-thread-cleanup (function sb-alien:void) :extern)
-                               (empty-thread-recyclebin (function sb-alien:void) :extern))
-           ;; avoid false "leak" errors from ASAN. There are three sets of thread
-           ;; structures to deal with:
-           ;; - threads still running at exit of the test suite
-           (sb-alien:alien-funcall asan-lisp-thread-cleanup)
-           ;; - threads ready to be pthread_joined, so effectively dead to Lisp
-           ;;   but whose pthread memory resources have not been released
-           (sb-thread:%dispose-thread-structs)
-           ;; - thread structures (not threads) awaiting reuse in the recycle list
-           (sb-alien:alien-funcall empty-thread-recyclebin))
   (format *error-output* "INFO: Exiting with ~D thread~:p remaining.~%" (length (all-threads)))
   (exit :timeout 10))
