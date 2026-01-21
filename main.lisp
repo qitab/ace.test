@@ -66,16 +66,5 @@ If ABORT is true, the process exits recklessly without cleaning up."
   (start-timeout-watcher)
   (unless (zerop (ace.test.runner:run-and-report-tests))
     (exit :status -1))
-  #+sbcl (sb-alien:with-alien ((asan-lisp-thread-cleanup (function sb-alien:void) :extern)
-                               (empty-thread-recyclebin (function sb-alien:void) :extern))
-           ;; avoid false "leak" errors from ASAN. There are three sets of thread
-           ;; structures to deal with:
-           ;; - threads still running at exit of the test suite
-           (sb-alien:alien-funcall asan-lisp-thread-cleanup)
-           ;; - threads ready to be pthread_joined, so effectively dead to Lisp
-           ;;   but whose pthread memory resources have not been released
-           (sb-thread:%dispose-thread-structs)
-           ;; - thread structures (not threads) awaiting reuse in the recycle list
-           (sb-alien:alien-funcall empty-thread-recyclebin))
   (format *error-output* "INFO: Exiting with ~D thread~:p remaining.~%" (length (all-threads)))
   (exit :timeout 10))
