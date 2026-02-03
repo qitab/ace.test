@@ -30,7 +30,7 @@
       (flet ((timeout-watcher ()
                (sleep (- timeout 5))
                (format *error-output* "INFO: The test is about to timeout.~%")
-               #+sbcl
+               #+(and sbcl x86-64)
                (let ((*print-pretty* nil))
                  (dolist (pair (sb-debug:backtrace-all-threads))
                    ;; No need for a backtrace of the timeout watcher
