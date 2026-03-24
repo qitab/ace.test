@@ -116,7 +116,7 @@
               #+google3 (format nil "http://cs/~@[f:~A%20~]~A" (function-file-path test)
                                 (symbol-name test))))
         (format
-         out "~&  <testcase name=\"~A\" status=\"run\" classname=\"~A\" time=\"~D\">~%"
+         out "~&  <testcase name=\"~A\" status=\"run\" classname=\"~A\" time=\"~F\">~%"
          (esc test) (esc package-name) (or time -1))
         (dolist (failure failed-conditions)
           (print-condition failure out :as :failure))
@@ -151,7 +151,7 @@
                      test-cases))
           (total-time (loop for s in test-cases sum (test-run-real-time s))))
       (format
-       out "~&<testsuite name=\"~A\" tests=\"~D\" failures=\"~D\" errors=\"~D\" time=\"~D\">~%"
+       out "~&<testsuite name=\"~A\" tests=\"~D\" failures=\"~D\" errors=\"~D\" time=\"~F\">~%"
        (esc name) (length test-cases) failure-count error-count total-time)
       (funcall print-function test-cases :out out)
       (format out "~&</testsuite>~%"))))
