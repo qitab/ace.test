@@ -16,8 +16,6 @@
   (:import-from #:ace.core.os #:getenv)
   (:import-from #:ace.core.string
                 #:search-replace)
-  (:import-from #:ace.core.macro
-                #:function-file-path)
   (:import-from #:ace.test.runner
                 #:with-sane-io-syntax
                 #:test-run
@@ -91,6 +89,14 @@
           (write-string (cdata (string-trim '(#\Newline #\Space #\Tab) trace)) f))
         (format f "</~(~A~)>~%" as)))
     out)))
+
+(defun function-file-path (function-name)
+  "Return the namestring of the file containing the source code for FUNCTION-NAME"
+  (let ((fun (and (fboundp function-name) (fdefinition function-name))))
+    (when fun
+      #+sbcl
+      (let ((di (sb-kernel:%code-debug-info (sb-kernel:fun-code-header fun))))
+        (sb-c::debug-source-namestring (sb-c::compiled-debug-info-source di))))))
 
 (defun print-test-case (status &key (out *standard-output*))
   "Print a test case from the test `STATUS' information to the stream `OUT'."
