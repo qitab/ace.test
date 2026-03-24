@@ -53,14 +53,14 @@
 
 (defun plus (a b) (+ a b))
 
-(deftest with-mock-functions-test :order nil ()
+(deftest with-mock-functions-test :order 2 ()
   (with-mock-functions
       ((minus (load-time-value #'plus))
        (plus (lambda (a b) (* a b))))
     (expect (= 6 (minus 3 3)))
     (expect (= 9 (plus 3 3)))))
 
-(deftest with-mock-functions-test2 :order nil ()
+(deftest with-mock-functions-test2 :order 3 ()
   (with-mock-functions
       ((plus (load-time-value #'minus))
        (minus (lambda (a b) (* a b))))
@@ -70,7 +70,7 @@
 (defvar *foo*)
 (defun (setf foo) (v) (setf *foo* v))
 
-(deftest with-mock-functions-test3 :order nil ()
+(deftest with-mock-functions-test3 :order 4 ()
   "Test that with-mock-functions can mock (setf ...) accessors."
   (let (*foo* bar)
     (with-mock-functions (((setf foo) (lambda (v) (setf bar v))))
@@ -78,7 +78,7 @@
       (expect (null *foo*))
       (expect (eq :bar bar)))))
 
-(deftest with-mock-functions-test4 :order nil ()
+(deftest with-mock-functions-test4 :order 5 ()
   (let ((real-plus (symbol-function 'plus))
         (real-minus (symbol-function 'minus)))
     (with-mock-functions
@@ -171,32 +171,32 @@
 
     (assert (equal (sort-tests (reverse *unit-tests*))
                    '(expect-error-test ; -1
-                     with-mock-functions-test
-                     with-mock-functions-test2
-                     with-mock-functions-test3
-                     with-mock-functions-test4
                      letf*-test
                      assert-failure-test
                      assert-macro-error-test
                      expect-macro-error-test
                      parse-deftest-options-test
                      signalsp-test     ; 1
+                     with-mock-functions-test ; 2
+                     with-mock-functions-test2 ; 3
+                     with-mock-functions-test3 ; 4
+                     with-mock-functions-test4 ; 5
                      assert-error-test))) ; t
 
     (multiple-value-bind (prologue middle epilogue)
         (make-schedule *unit-tests*)
       (assert (equal '(expect-error-test) prologue)) ; -1
-      (assert (equal '(with-mock-functions-test
-                       with-mock-functions-test2
-                       with-mock-functions-test3
-                       with-mock-functions-test4
-                       letf*-test
+      (assert (equal '(letf*-test
                        assert-failure-test
                        assert-macro-error-test
                        expect-macro-error-test
                        parse-deftest-options-test)
                      middle))
       (assert (equal '(signalsp-test     ; 1
+                       with-mock-functions-test ; 2
+                       with-mock-functions-test2 ; 3
+                       with-mock-functions-test3 ; 4
+                       with-mock-functions-test4 ; 5
                        assert-error-test) ; t
                      epilogue)))
 
