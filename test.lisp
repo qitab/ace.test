@@ -283,6 +283,9 @@ the code and to provide test hooks or proper test interfaces."
 #+sbcl
 (defun call-with-mocks (thunk names &rest wrappers)
   (sb-int:aver (= (length wrappers) (length names)))
+  (dolist (name names)
+    (unless (eq (sb-int:info :function :inlinep name) 'notinline)
+      (error "~/sb-ext:print-symbol-with-prefix/ should be DECLAIMed notinline" name)))
   (with-recursive-lock-held (*unsafe-code-test-mutex*)
     (unwind-protect
          (progn
