@@ -460,13 +460,7 @@ If PARALLEL is NIL, the PARALLEL tests will be empty."))
                             :test test
                             :parallel (and parallel (not (get test 'order)))
                             :timeout (get test 'timeout (default-timeout))
-                            :output-stream (make-string-output-stream)))
-                      (package (symbol-package test))
-                      (name (format nil "~@[~A::~]~A"
-                                    (and package (package-name package))
-                                    (symbol-name test))))
-                 (unless (search "TEST" name :test #'char-equal)
-                   (setf name (format nil "~A - TEST" name)))
+                            :output-stream (make-string-output-stream))))
                  ;; Record all of the test-runs created.
                  (push run all-runs)
                  ;; Call run-test with specified arguments.
@@ -476,7 +470,7 @@ If PARALLEL is NIL, the PARALLEL tests will be empty."))
                      (format
                       out "~&~32/ansi/: Scheduling test: ~A~%" :INFO test))
                    (if threaded
-                       (let ((thread (make-thread #'run :name name)))
+                       (let ((thread (make-thread #'run :name (string test))))
                          ;; Return a promise to join the thread.
                          (lambda ()
                            (handler-case (join-thread thread)
