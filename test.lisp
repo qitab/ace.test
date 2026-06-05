@@ -37,6 +37,7 @@
    #:deftest
    #:letf*
    ;; Mocking
+   #:with-mock-foreign-functions
    #:with-mock-functions
    #:with-mock-functions*
    ;; Execution
@@ -294,3 +295,19 @@ the code and to provide test hooks or proper test interfaces."
            (funcall thunk))
       (dolist (name names)
         (sb-int:unencapsulate name 'mock)))))
+
+#+sbcl
+(progn
+(defmacro with-mock-foreign-functions (name-mapping &body body)
+  `(let ((routines-to-restore (intercept-alien-linkage ',name-mapping)))
+     (unwind-protect (progn ,@body)
+       (restore-alien-linkage routines-to-restore))))
+
+(defun intercept-alien-linkage (name-mapping &aux restore)
+  ;; name mapping is a list of pairs: (c-name replacement)
+  ;; where c-name is a string and replacement is an alien-callable.
+  (dolist (pair name-mapping restore)
+    (push (sb-alien-internals:override-alien-linkage-entrypoint (car pair) (cadr pair)) restore)))
+
+(defun restore-alien-linkage (pairs)
+  (dolist (pair pairs) (setf (sb-sys:sap-ref-word (car pair) 0) (cdr pair)))))
