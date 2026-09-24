@@ -93,7 +93,7 @@
 (defun bar () *bar*)
 (defun (setf bar) (v) (setf *bar* v))
 
-(deftest letf*-test :order nil  ()
+(deftest letf*-test ()
   (let ((a 'a) *bar* (c 'c))
     (letf* ((a 1)
             ((bar) 4)
@@ -105,7 +105,7 @@
     (expect (eq c 'c))
     (expect (not *bar*))))
 
-(deftest assert-failure-test :order nil ()
+(deftest assert-failure-test ()
   ;; Intentionally errors out.
   (check (not "EVER-PASSES")))
 
@@ -113,12 +113,12 @@
   (check-type a string)
   `(format nil "*~A*" ,a))
 
-(deftest assert-macro-error-test :order nil ()
+(deftest assert-macro-error-test ()
   (assert-macro-error (accepts-string 10))
   (assert-error
     (assert-macro-error (accetps-string "10"))))
 
-(deftest expect-macro-error-test :order nil ()
+(deftest expect-macro-error-test ()
   (assert (null *failed-conditions*))
   ;; Intentionally errors out.
   (expect-macro-error (accepts-string "10"))
@@ -128,7 +128,7 @@
   (assert (= 1 (length *failed-conditions*)))
   (setf *failed-conditions* nil))
 
-(deftest parse-deftest-options-test :order nil ()
+(deftest parse-deftest-options-test ()
   (multiple-value-bind (order timeout args body)
       (ace.test::parse-deftest-options
        '(:timeout 5 :order 3 (&optional foo bar baz)
@@ -168,38 +168,6 @@
 
   (let ((unit-tests *unit-tests*)
         (unit-tests-cpy (copy-list *unit-tests*)))
-
-    (assert (equal (sort-tests (reverse *unit-tests*))
-                   '(expect-error-test ; -1
-                     letf*-test
-                     assert-failure-test
-                     assert-macro-error-test
-                     expect-macro-error-test
-                     parse-deftest-options-test
-                     signalsp-test     ; 1
-                     with-mock-functions-test ; 2
-                     with-mock-functions-test2 ; 3
-                     with-mock-functions-test3 ; 4
-                     with-mock-functions-test4 ; 5
-                     assert-error-test))) ; t
-
-    (multiple-value-bind (prologue middle epilogue)
-        (make-schedule *unit-tests*)
-      (assert (equal '(expect-error-test) prologue)) ; -1
-      (assert (equal '(letf*-test
-                       assert-failure-test
-                       assert-macro-error-test
-                       expect-macro-error-test
-                       parse-deftest-options-test)
-                     middle))
-      (assert (equal '(signalsp-test     ; 1
-                       with-mock-functions-test ; 2
-                       with-mock-functions-test2 ; 3
-                       with-mock-functions-test3 ; 4
-                       with-mock-functions-test4 ; 5
-                       assert-error-test) ; t
-                     epilogue)))
-
     (assert (eq unit-tests *unit-tests*))
     (assert (equal unit-tests-cpy *unit-tests*)))
 

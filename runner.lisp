@@ -439,6 +439,8 @@ If PARALLEL is NIL, the PARALLEL tests will be empty."))
     (declare (list failed-runs all-runs))
     (multiple-value-setq (prologue parallel-tests epilogue)
       (make-schedule filtered-unit-tests :parallel parallel))
+    (check (not parallel-tests))
+    (check (not epilogue))
     (when verbose
       (format
        out
