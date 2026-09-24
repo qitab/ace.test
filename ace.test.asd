@@ -1,7 +1,6 @@
 (defparameter *files*
   '("runner"
     "main"
-    "sharding"
     "test"
     "xml-report"))
 
@@ -15,7 +14,6 @@
  ace.test - is a summary package that can be used as a namespace,
   .main - add default main for testing,
   .runner - the test runner,
-  .sharder - utilities for sharding the tests.,
   .test - simple utils to define unit tests,
   .etc - a plug-in for the //list/test:runner printing JUnit XML report"
   :version "1.0"

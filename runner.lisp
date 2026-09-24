@@ -378,44 +378,48 @@ If FILTERED-NAMES in NIL, return the full list of UNIT-TESTS."
               :collect ut)
       unit-tests))
 
-(defgeneric make-schedule (tests &key parallel &allow-other-keys)
-  (:documentation
-   "Divide the TESTS in 3 groups:
+(defun nop () (expect :nothing))
+
+(defun make-schedule (tests &key (parallel *parallel*))
+  "Divides TESTS into 3 groups:
  - PROLOGUE - serial tests run at start,
  - PARALLEL - run parallel in multiple threads,
  - EPILOGUE - serial tests run at the end.
 
-Returns 2 lists as (VALUES PROLOGUE PARALLEL EPILOGUE).
-If PARALLEL is NIL, the PARALLEL tests will be empty."))
-
-(defun sort-tests (tests)
-  "Sorts a list of TESTS in execution order and returns a copy."
-  (stable-sort tests
-               (lambda (x y)
-                 (cond ((eql x t) nil)
-                       ((eql y t) t)
-                       ((< (or x 0) (or y 0)))))
-               :key (lambda (test) (get test 'order))))
-
-(defmethod make-schedule (tests &key (parallel *parallel*) &allow-other-keys)
-  (let ((tests (sort-tests (reverse tests))))
-    (unless parallel
-      (return-from make-schedule
-        (values tests nil nil)))
-
-    (let (prologue parallel epilogue serial-tests-at-end)
-      (dolist (test tests)
-        (cond ((not (get test 'order))
-               (setf serial-tests-at-end t)
-               (push test parallel))
-              (serial-tests-at-end
-               (push test epilogue))
-              (t
-               (push test prologue))))
-
-      (values (nreverse prologue)
-              (nreverse parallel)
-              (nreverse epilogue)))))
+Returns 3 lists as (VALUES PROLOGUE PARALLEL EPILOGUE), sharded if
+TEST_TOTAL_SHARDS and TEST_SHARD_INDEX are set."
+  (let (prologue parallel-tests epilogue serial-tests-at-end)
+    (if parallel
+        (progn
+          (dolist (test (reverse tests))
+            (cond ((not (get test 'order))
+                   (setf serial-tests-at-end t)
+                   (push test parallel-tests))
+                  (serial-tests-at-end
+                   (push test epilogue))
+                  (t
+                   (push test prologue))))
+          (setf prologue (nreverse prologue)
+                parallel-tests (nreverse parallel-tests)
+                epilogue (nreverse epilogue)))
+        (setf prologue (reverse tests)))
+    (let ((total-shards (parse-integer (getenv "TEST_TOTAL_SHARDS" "") :junk-allowed t))
+          (shard-index (parse-integer (getenv "TEST_SHARD_INDEX" "") :junk-allowed t)))
+      (when (and total-shards shard-index (< -1 shard-index total-shards))
+        (let ((status-file (getenv "TEST_SHARD_STATUS_FILE"))
+              (i -1))
+          (when status-file
+            (open status-file :direction :probe :if-does-not-exist :create))
+          (flet ((shard-filter (list)
+                   (loop :for test :in list
+                         :when (= (mod (incf i) total-shards) shard-index)
+                           :collect test)))
+            (setf prologue (shard-filter prologue)
+                  parallel-tests (shard-filter parallel-tests)
+                  epilogue (shard-filter epilogue))
+            (unless (or prologue parallel-tests epilogue)
+              (setf prologue '(nop)))))))
+    (values prologue parallel-tests epilogue)))
 
 (defun %run-tests (&key
                    (debug *debug-unit-tests*)
