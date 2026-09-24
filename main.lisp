@@ -38,13 +38,6 @@
                      (format *debug-io* "~&Backtrace for ~A:~%~A~%" (car pair) (cdr pair)))))))
         (make-thread #'timeout-watcher :name "Timeout-Watcher")))))
 
-#+google3
-(flag:define ace.test.runner::*parallel* t
-   "Run tests in parallel (default)."
-   :name "parallel-lisp-tests"
-   :type boolean
-   :def nil)
-
 (defun exit (&key (status 0) (timeout 60) abort)
   "Exit with STATUS, waiting at most TIMEOUT seconds for other threads.
 If ABORT is true, the process exits recklessly without cleaning up."

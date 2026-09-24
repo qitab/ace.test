@@ -32,7 +32,6 @@
    #:*checks-count*
    #:*failed-conditions*
    #:failed-conditions
-   #:make-schedule
    #:nothing-tested
    #:run-tests
    #:*reporting-hooks*
@@ -103,12 +102,6 @@
 
 ;;; Parameters.
 
-(declaim (boolean *parallel*))
-(defvar *parallel* t "A flag for running tests in multiple threads.")
-
-(declaim (boolean *threaded*))
-(defvar *threaded* t "If true test are run in designated threads.")
-
 (declaim (boolean *debug-unit-tests*))
 (defvar *debug-unit-tests* nil "If non-nil, each error will invoke the debugger.")
 
@@ -119,8 +112,6 @@
   "The state and other properties of a test-run."
   ;; The name of the test.
   (test nil :type symbol)
-  ;; Indicates if the test is run in a separate thread.
-  (parallel nil :type boolean)
   ;; The timeout in seconds for the test.
   (timeout nil :type (or null number))
   ;; The test failure condition.
@@ -378,89 +369,36 @@ If FILTERED-NAMES in NIL, return the full list of UNIT-TESTS."
               :collect ut)
       unit-tests))
 
-(defgeneric make-schedule (tests &key parallel &allow-other-keys)
-  (:documentation
-   "Divide the TESTS in 3 groups:
- - PROLOGUE - serial tests run at start,
- - PARALLEL - run parallel in multiple threads,
- - EPILOGUE - serial tests run at the end.
-
-Returns 2 lists as (VALUES PROLOGUE PARALLEL EPILOGUE).
-If PARALLEL is NIL, the PARALLEL tests will be empty."))
-
-(defun sort-tests (tests)
-  "Sorts a list of TESTS in execution order and returns a copy."
-  (stable-sort tests
-               (lambda (x y)
-                 (cond ((eql x t) nil)
-                       ((eql y t) t)
-                       ((< (or x 0) (or y 0)))))
-               :key (lambda (test) (get test 'order))))
-
-(defmethod make-schedule (tests &key (parallel *parallel*) &allow-other-keys)
-  (let ((tests (sort-tests (reverse tests))))
-    (unless parallel
-      (return-from make-schedule
-        (values tests nil nil)))
-
-    (let (prologue parallel epilogue serial-tests-at-end)
-      (dolist (test tests)
-        (cond ((not (get test 'order))
-               (setf serial-tests-at-end t)
-               (push test parallel))
-              (serial-tests-at-end
-               (push test epilogue))
-              (t
-               (push test prologue))))
-
-      (values (nreverse prologue)
-              (nreverse parallel)
-              (nreverse epilogue)))))
-
 (defun %run-tests (&key
                    (debug *debug-unit-tests*)
-                   (threaded (unless debug *threaded*))
-                   (parallel (and threaded *parallel*))
                    (out *error-output*)
                    (verbose debug))
   "Runs all tests.
  Arguments:
   DEBUG    - when non-nil, send each test failure to the debugger
-  PARALLEL - when non-nil, the tests may be executed in parallel on multiple threads
-  THREADED - when nil, tests are run in the current thread.
   OUT      - stream to send output to
   VERBOSE  - when non-nil, output test test-run lines for each test
  Returns a list of all tests outcomes (as test-run objects) and a list of failed test outcomes."
   (let ((*debug-unit-tests* debug)
         (filtered-unit-tests
-         (filter-unit-tests *unit-tests* (test-only-filter)))
-        all-runs failed-runs
-        prologue parallel-tests epilogue)
+         (reverse (filter-unit-tests *unit-tests* (test-only-filter))))
+        all-runs failed-runs)
     (declare (list failed-runs all-runs))
-    (multiple-value-setq (prologue parallel-tests epilogue)
-      (make-schedule filtered-unit-tests :parallel parallel))
-    (check (not parallel-tests))
-    (check (not epilogue))
     (when verbose
       (format
        out
-       "~&~32/ansi/: Running ~D test~:P ~:[serially~;in parallel: ~:*~D~]:~%~
-        ~@[~&;; serial~%~{~&   ~S~}~]~
-        ~@[~&;; parallel~%~{~&   ~S~}~]~
-        ~@[~&;; serial~%~{~&   ~S~}~]~&"
-       :INFO (+ (length prologue) (length parallel-tests) (length epilogue))
-       (and parallel-tests (length parallel-tests))
-       prologue parallel-tests epilogue))
+       "~&~32/ansi/: Running ~D test~:P serially:~%~
+        ~@[~&;; serial~%~{~&   ~S~}~]~~&"
+       :INFO (length filtered-unit-tests) filtered-unit-tests))
     (labels ((evaluate (run)
                ;; Evaluates a test-run. Adds failed test to failed-runs.
                (unless (evaluate-test-run run :verbose verbose :output out)
                  (push run failed-runs)))
-             (start-run (test &key (parallel parallel))
+             (start-run (test)
                ;; Starts the TEST in another thread - returns a promise.
                ;; Create the test-run status object.
                (let* ((run (make-test-run
                             :test test
-                            :parallel (and parallel (not (get test 'order)))
                             :timeout (get test 'timeout (default-timeout))
                             :output-stream (make-string-output-stream))))
                  ;; Record all of the test-runs created.
@@ -468,31 +406,17 @@ If PARALLEL is NIL, the PARALLEL tests will be empty."))
                  ;; Call run-test with specified arguments.
                  (flet ((run () (run-test test :run run :debug debug) run))
                    ;; Start the thread that runs the test.
-                   (when (and verbose (not parallel))
+                   (when verbose
                      (format
                       out "~&~32/ansi/: Scheduling test: ~A~%" :INFO test))
-                   (if threaded
-                       (let ((thread (make-thread #'run :name (string test))))
-                         ;; Return a promise to join the thread.
-                         (lambda ()
-                           (handler-case (join-thread thread)
-                             (error (e) (update-test-run run e)))
-                           (evaluate run)))
-                       (lambda ()
-                         (evaluate (run)))))))
+                   (lambda () (evaluate (run))))))
              (run-immediate (test)
                ;; Run and immediately join on the thread.
                ;; This synchronizes the execution.
-               (funcall (start-run test :parallel nil))))
-      (declare (inline evaluate start-run run-immediate))
+               (funcall (start-run test))))
       (when verbose (separator-line out))
       ;; Execute the schedule.
-      ;; Serial tests executed at start before the whole body of tests:
-      (map () #'run-immediate prologue)
-      ;; Parallel tests evaluate in between.
-      (map () #'funcall (mapcar #'start-run parallel-tests))
-      ;; Serial tests executed at the end after all of the tests.
-      (map () #'run-immediate epilogue)
+      (map () #'run-immediate filtered-unit-tests)
       ;; Check if any loose thread generated a failed condition.
       (let ((*failed-conditions*
              (with-mutex (*failed-conditions-mutex*)
@@ -509,21 +433,16 @@ If PARALLEL is NIL, the PARALLEL tests will be empty."))
 
 (defun run-tests (&key
                   (debug *debug-unit-tests*)
-                  (threaded (unless debug *threaded*))
-                  (parallel (and threaded *parallel*))
                   (out *error-output*)
                   (verbose t))
   "Runs all tests.
  Arguments:
   DEBUG    - when non-nil, send each test failure to the debugger
-  PARALLEL - when non-nil, the tests may be executed in parallel on multiple threads
-  THREADED - when nil, tests are run in the current thread.
   OUT      - stream to send output to
   VERBOSE  - when non-nil, output test test-run lines for each test
  Returns T if all tests succeed."
   (multiple-value-bind (all failed)
-      (%run-tests :debug debug :parallel parallel :threaded threaded
-                  :out out :verbose verbose)
+      (%run-tests :debug debug :out out :verbose verbose)
   (let ((all-count (length all))
         (failed-count (length failed))
         (check-count (loop for test-run in all sum (test-run-checks-count test-run))))

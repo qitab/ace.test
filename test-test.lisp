@@ -16,8 +16,7 @@
                 #:*unit-tests*
                 #:%run-tests
                 #:make-schedule
-                #:order
-                #:sort-tests))
+                #:order))
 
 (cl:in-package #:ace.test-test)
 
@@ -162,9 +161,6 @@
   (assert (get 'assert-error-test 'order))
 
   (format t "RT:~{~&  ~A~%~}" (reverse *unit-tests*))
-  (format t "ST:~{~&  ~A~%~}" (sort-tests (reverse *unit-tests*)))
-  (format t "TO: ~A~%" (mapcar (lambda (test) (get test 'order))
-                               (sort-tests (reverse *unit-tests*))))
 
   (let ((unit-tests *unit-tests*)
         (unit-tests-cpy (copy-list *unit-tests*)))
