@@ -38,11 +38,10 @@
                      (format *debug-io* "~&Backtrace for ~A:~%~A~%" (car pair) (cdr pair)))))))
         (make-thread #'timeout-watcher :name "Timeout-Watcher")))))
 
-(defun exit (&key (status 0) (timeout 60) abort)
-  "Exit with STATUS, waiting at most TIMEOUT seconds for other threads.
-If ABORT is true, the process exits recklessly without cleaning up."
-  (declare (ignorable timeout abort))
-  #+sbcl (sb-ext:exit :code status :abort abort :timeout timeout)
+(defun exit (status &key (timeout 60))
+  "Exit with STATUS, waiting at most TIMEOUT seconds for other threads."
+  (declare (ignorable timeout))
+  #+sbcl (sb-ext:exit :code status :timeout timeout)
   #+ccl (ccl:quit status)
   #+clisp (ext:quit status)
   #+cmu (unix:unix-exit status)
@@ -52,12 +51,11 @@ If ABORT is true, the process exits recklessly without cleaning up."
 
 (defun cl-user::main ()
   "Default main for unit tests."
-  ;; TODO(czak): Fix the issues with InitGoogle.
   #+google3
   (google:init (flag:parse-command-line :args (append (flag:command-line)
                                                                    '("--logtostderr"))))
   (start-timeout-watcher)
   (unless (zerop (ace.test.runner:run-and-report-tests))
-    (exit :status -1))
+    (exit #xFF))
   (format *error-output* "INFO: Exiting with ~D thread~:p remaining.~%" (length (all-threads)))
-  (exit :timeout 10))
+  (exit 0 :timeout 10))
