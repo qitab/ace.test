@@ -77,16 +77,6 @@
 (defvar *failed-conditions-mutex* (make-mutex "failed-conditions-mutex.")
   "Protects the *failed-conditions*.")
 
-;; Hook up to CHECK and EXPECT to get the proper counts.
-
-(defmethod check :before (result &optional datum &rest arguments)
-  (declare (ignore datum arguments))
-  (incf *checks-count*))
-
-(defmethod expect :before (result &optional datum &rest arguments)
-  (declare (ignore datum arguments))
-  (incf *checks-count*))
-
 (defun register-failure (failure)
   "Registers a FAILURE condition adding it to *FAILED-CONDITIONS* variable."
   (with-mutex (*failed-conditions-mutex*)
