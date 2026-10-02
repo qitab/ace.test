@@ -11,7 +11,6 @@
 (cl:defpackage #:ace.test-test
   (:use #:common-lisp #:ace.test)
   (:import-from #:ace.test.runner
-                #:*checks-count*
                 #:*failed-conditions*
                 #:*unit-tests*
                 #:%run-tests
@@ -140,11 +139,9 @@
 
 (defun report-unknown-failures ()
   (let ((dev/null (make-broadcast-stream))
-        (*checks-count* 0)
         (*failed-conditions* nil)
         (*unit-tests* nil))
     (expect nil "Expect failure outside of deftest")
-    (assert (> *checks-count* 0))
     (assert *failed-conditions*)
     (assert (= 1 (ace.test.runner:run-and-report-tests
                   :out dev/null :verbose nil)))))

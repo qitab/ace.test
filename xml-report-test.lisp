@@ -27,7 +27,6 @@
                :error nil
                :trace nil
                :output-text "foo"
-               :checks-count 10
                :failed-conditions nil
                :real-time-start 0
                :real-time-stop (millisec-to-internal-time-units 666)))
@@ -41,7 +40,6 @@
   <system-out><![CDATA[foo]]></system-out>
   <properties>
    <property name=\"lisp-function\" value=\"http://cs/PRINT-TESTS-REPORT-TEST\" />
-   <property name=\"checks-count\" value=\"10\" />
   </properties>
   </testcase>
 </testsuite>
@@ -61,7 +59,6 @@
 5: (EVAL (SB-DEBUG:PRINT-BACKTRACE))
 6: (SWANK::EVAL-REGION \"(sb-debug:print-backtrace)
 \")"
-               :checks-count 10
                :failed-conditions nil
                :real-time-start 0
                :real-time-stop (millisec-to-internal-time-units 666)))
@@ -91,7 +88,6 @@ foo
 \")]]></error>
   <properties>
    <property name=\"lisp-function\" value=\"http://cs/PRINT-TESTS-REPORT-TEST\" />
-   <property name=\"checks-count\" value=\"10\" />
   </properties>
   </testcase>
 </testsuite>
@@ -101,7 +97,6 @@ foo
 (deftest print-tests-report-failures-test ()
   (let* ((run (make-test-run
                :test 'print-tests-report-test
-               :checks-count 10
                :failed-conditions
                (list (make-condition 'simple-error :format-control "foo~% bar~% baz")
                      (make-condition 'simple-warning :format-control "qux~% quax~% quaz"))
@@ -130,7 +125,6 @@ qux
  quaz</failure>
   <properties>
    <property name=\"lisp-function\" value=\"http://cs/PRINT-TESTS-REPORT-TEST\" />
-   <property name=\"checks-count\" value=\"10\" />
    <property name=\"failed-checks\" value=\"2\" />
   </properties>
   </testcase>

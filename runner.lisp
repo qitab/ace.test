@@ -25,15 +25,12 @@
   (:import-from #:ace.core.check.condition
                 #:failed
                 #:missed
-                #:*on-missed-expectation*
-                #:alternate-truth-form)
+                #:*on-missed-expectation*)
   (:export
    ;; Execution of tests.
-   #:*checks-count*
    #:*failed-conditions*
    #:failed-conditions
    #:make-schedule
-   #:nothing-tested
    #:run-tests
    #:*reporting-hooks*
    #:run-and-report-tests
@@ -66,10 +63,6 @@
 (defvar *unit-tests* nil
   "A list of symbols representing the unit-tests executed with run-tests or check-tests.")
 
-(declaim (type (unsigned-byte 62) *checks-count*))
-(defvar *checks-count* 0
-  "The number of conditions tested with CHECK/EXPECT. Bound by RUN-TEST to 0.")
-
 (declaim (list *failed-conditions*))
 (defvar *failed-conditions* nil
   "The list of failed condition objects. Bound by RUN-TEST to NIL.")
@@ -84,11 +77,6 @@
   (values))
 
 (setf *on-missed-expectation* #'register-failure)
-
-(defmethod alternate-truth-form :around (form)
-  `(progn
-     (incf *checks-count*)
-     ,(call-next-method)))
 
 ;;; Parameters.
 
@@ -111,8 +99,6 @@
   ;; Used as the standard- and error-output.
   (output-stream nil :type (or null stream))
   (output-text "" :type string)
-  ;; All the checks and expected conditions in tests.
-  (checks-count 0 :type integer)
   ;; Failed non fatal conditions.
   (failed-conditions nil :type list)
   ;; Execution timing.
@@ -145,20 +131,16 @@
 
 (defmethod print-object ((run test-run) stream)
   "Prints a test RUN object to the STREAM."
-  (with-slots (test error checks-count failed-conditions) run
+  (with-slots (test error failed-conditions) run
     (let ((failed-count (length failed-conditions)))
       (print-unreadable-object (run stream)
         (format stream
-                "~S: ~:[OK~;~:*~S~]~:[~3*~; [~:[~*~;~D/~]~D]~]"
+                "~S: ~:[OK~;~:*~S~]~:[~*~; [~D]~]"
                 test (and error (type-of error))
-                (plusp checks-count) (plusp failed-count)
-                failed-count checks-count)))))
+                (plusp failed-count) failed-count)))))
 
 (define-condition failed-conditions (failed) ()
   (:documentation "A type of FAILED that is returned if some expectations failed."))
-
-(define-condition nothing-tested (failed) ()
-  (:documentation "A type of FAILED that is returned if no check have been performed."))
 
 ;; Inlined so not to add clutter to the backtrace.
 (declaim (inline update-test-run))
@@ -168,12 +150,10 @@ adds the ERROR and a stack trace to the test RUN."
   (with-accessors ((test              test-run-test)
                    (error             test-run-error)
                    (trace             test-run-trace)
-                   (checks-count      test-run-checks-count)
                    (failed-conditions test-run-failed-conditions)
                    (output-stream     test-run-output-stream)
                    (output-text       test-run-output-text)) run
-    (setf checks-count *checks-count*
-          failed-conditions (reverse *failed-conditions*))
+    (setf failed-conditions (reverse *failed-conditions*))
     (test-run-stop-time run)
     (cond (error-condition
            (setf error error-condition
@@ -186,16 +166,9 @@ adds the ERROR and a stack trace to the test RUN."
                  (make-condition
                   'failed-conditions
                   :format-control
-                  "The test ~S ended with ~D (out of ~D) failed conditions."
+                  "The test ~S ended with ~D failed condition~:P."
                   :format-arguments
-                  (list test (length failed-conditions) checks-count))))
-          ((zerop checks-count)
-           (setf error
-                 (make-condition
-                  'nothing-tested
-                  :format-control
-                  "The test ~S ended with no conditions being tested. Use EXPECT or CHECK."
-                  :format-arguments (list test)))))
+                  (list test (length failed-conditions))))))
     (when output-stream
       (setf output-text
             (concatenate 'string output-text (get-output-stream-string output-stream)))))
@@ -241,7 +214,6 @@ Returns true if there was no error."
   (declare (stream output))
   (with-accessors ((error             test-run-error)
                    (output-text       test-run-output-text)
-                   (checks-count      test-run-checks-count)
                    (failed-conditions test-run-failed-conditions)
                    (time              test-run-real-time)) run
     (when verbose
@@ -250,13 +222,11 @@ Returns true if there was no error."
               (if error 31 32) (if error (type-of error) :PASSED))
       (cond (failed-conditions
              (format output " ~31/ansi/~@[ ~,3Fs~]~%"
-                     (format nil "[~D/~D]" (length failed-conditions) checks-count)
+                     (format nil "[~D]" (length failed-conditions))
                      (and (>= time 0.001) time)))
-            ((plusp checks-count)
-             (format output " [~D]~@[ ~,3Fs~]~%"
-                     checks-count (and (>= time 0.001) time)))
             (t
-             (terpri output)))
+             (format output "~@[ ~,3Fs~]~%"
+                     (and (>= time 0.001) time))))
       (when (plusp (length output-text))
         (format output "~%~A~&" output-text)
         (separator-line output)))
@@ -303,7 +273,6 @@ Returns true if there was no error."
              (if (and debug out)
                  (make-broadcast-stream out *debug-io*)
                  (or out *debug-io*))))
-           (*checks-count* 0)
            (*failed-conditions* nil)
            (*package* (or (symbol-package test) *package*)))
       (flet ((on-warning (warning)
@@ -359,8 +328,6 @@ If FILTERED-NAMES in NIL, return the full list of UNIT-TESTS."
               :collect ut)
       unit-tests))
 
-(defun nop () (expect :nothing))
-
 (defun make-schedule (tests)
   "Returns TESTS in execution order, sharded if TEST_TOTAL_SHARDS and
 TEST_SHARD_INDEX are set."
@@ -373,10 +340,9 @@ TEST_SHARD_INDEX are set."
         (when status-file
           (open status-file :direction :probe :if-does-not-exist :create))
         (setf schedule
-              (or (loop :for test :in schedule
-                        :when (= (mod (incf i) total-shards) shard-index)
-                          :collect test)
-                  '(nop)))))
+              (loop :for test :in schedule
+                    :when (= (mod (incf i) total-shards) shard-index)
+                      :collect test))))
     schedule))
 
 (defun %run-tests (&key
@@ -421,7 +387,6 @@ TEST_SHARD_INDEX are set."
             (update-test-run run)
             (evaluate run)
             (push run all-runs)))))
-    (setf *checks-count* 0)
     ;; Failed-tests are in the reverse order.
     (values (nreverse all-runs) (nreverse failed-runs))))
 
@@ -438,11 +403,10 @@ TEST_SHARD_INDEX are set."
   (multiple-value-bind (all failed)
       (%run-tests :debug debug :out out :verbose verbose)
     (let ((all-count (length all))
-          (failed-count (length failed))
-          (check-count (loop for test-run in all sum (test-run-checks-count test-run))))
+          (failed-count (length failed)))
       (when (or verbose debug)
-        (format out "~&Run ~D test~:p with ~D check~:p. ~D failed test~:p."
-                all-count check-count failed-count))
+        (format out "~&Run ~D test~:p. ~D failed test~:p."
+                all-count failed-count))
       (zerop failed-count))))
 
 (defvar *reporting-hooks* nil "User-specified final report functions")
@@ -452,8 +416,7 @@ TEST_SHARD_INDEX are set."
       (:no-error (&rest vals) (values-list vals))
       (error (e) (format t "Caught [~A] while trying to run reporting hook" e))))
   (let ((fail-count (count-if #'test-run-error tests))
-        (all-count (length tests))
-        (checks-count (loop for test-run in tests sum (test-run-checks-count test-run))))
+        (all-count (length tests)))
     (cond ((plusp fail-count)
            (format out "~&~31/ansi/: ~A (out of ~A) test~:P failed:~%"
                    :ERROR fail-count all-count)
@@ -464,11 +427,9 @@ TEST_SHARD_INDEX are set."
            fail-count)
           ((zerop all-count)
            (format out "~&~33/ansi/: No tests have been executed.~%" :WARNING)
-           -1)
+           0)
           (t
-           (format
-            out "~&~32/ansi/: ~D test~:P passed.~:[~*~; Counted ~D check~:p.~]~%"
-            :INFO all-count (plusp checks-count) checks-count)
+           (format out "~&~32/ansi/: ~D test~:P passed.~%" :INFO all-count)
            0))))
 
 (defun run-and-report-tests (&key (out *error-output*) (verbose t))
@@ -476,7 +437,6 @@ TEST_SHARD_INDEX are set."
  OUT is the stream to report the test failures.
  VERBOSE will print a report for all tests.
  Returns the number of failed tests.
- Returns -1 if no tests are registered.
  Returns 0 otherwise."
   (prog1
     (report-tests (%run-tests :debug nil :verbose verbose :out out) :out out)

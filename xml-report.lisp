@@ -23,7 +23,6 @@
                 #:test-run-error
                 #:test-run-trace
                 #:test-run-output-text
-                #:test-run-checks-count
                 #:test-run-failed-conditions
                 #:test-run-real-time))
 
@@ -103,7 +102,6 @@
   (with-accessors ((test              test-run-test)
                    (error             test-run-error)
                    (trace             test-run-trace)
-                   (checks-count      test-run-checks-count)
                    (failed-conditions test-run-failed-conditions)
                    (output-text       test-run-output-text)
                    (time              test-run-real-time)) status
@@ -126,7 +124,6 @@
           (format out "~&  <system-out>~A</system-out>~%" (cdata output-text)))
         (properties `(,@(when codesearch-link
                           `(("lisp-function" ,codesearch-link)))
-                      ("checks-count" ,checks-count)
                       ,@(when failed-conditions
                           `(("failed-checks" ,(length failed-conditions)))))
                     out))
