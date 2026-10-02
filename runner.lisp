@@ -36,8 +36,6 @@
    #:run-and-report-tests
    #:deregister-tests
    #:*debug-unit-tests*
-   ;; TIMEOUT is a symbol naming a condition, and it was confusing to also have it name a function,
-   ;; so the function is now named DEFAULT-TIMEOUT
    #:default-timeout
    #:order))
 
@@ -46,15 +44,12 @@
 ;;; Compatibility shims
 #+bordeaux-threads
 (progn
-  (eval-when (:compile-toplevel :load-toplevel :execute)
-    (import '(bordeaux-threads:with-timeout bordeaux-threads:timeout)))
   (defun make-mutex (name) (bordeaux-threads:make-lock name))
   (defmacro with-mutex ((lock) &body body) `(bordeaux-threads:with-lock-held (,lock) ,@body)))
 #+(and sbcl (not bordeaux-threads))
 (progn
   (eval-when (:compile-toplevel :load-toplevel :execute)
-    (import '(sb-thread:with-mutex sb-ext:timeout)))
-  (defmacro with-timeout ((time) &body body) `(sb-ext:with-timeout ,time ,@body))
+    (import '(sb-thread:with-mutex)))
   (defun make-mutex (name) (sb-thread:make-mutex :name name)))
 
 ;;; Test execution.
@@ -90,8 +85,6 @@
   "The state and other properties of a test-run."
   ;; The name of the test.
   (test nil :type symbol)
-  ;; The timeout in seconds for the test.
-  (timeout nil :type (or null number))
   ;; The test failure condition.
   (error nil :type (or null condition))
   ;; The backtrace for the error.
@@ -284,15 +277,10 @@ Returns true if there was no error."
                    (return-from run-test (update-test-run run error)))))
         (test-run-start-time run)
         (handler-bind ((missed #'on-warning)
-                       (error #'on-error)
-                       (timeout #'on-error))
+                       (error #'on-error))
           (loop do
             (with-simple-restart (retry "Retry ~S" test)
-              (return
-                (if (test-run-timeout run)
-                    (with-timeout ((test-run-timeout run))
-                      (funcall (symbol-function test)))
-                    (funcall (symbol-function test)))))))
+              (return (funcall (symbol-function test))))))
         (update-test-run run)))))
 
 (defun default-timeout ()
@@ -370,7 +358,6 @@ TEST_SHARD_INDEX are set."
       (dolist (test schedule)
         (let ((run (make-test-run
                     :test test
-                    :timeout (get test 'timeout (default-timeout))
                     :output-stream (make-string-output-stream))))
           (push run all-runs)
           (when verbose

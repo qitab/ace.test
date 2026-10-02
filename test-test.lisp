@@ -127,12 +127,11 @@
   (setf *failed-conditions* nil))
 
 (deftest parse-deftest-options-test ()
-  (multiple-value-bind (order timeout args body)
+  (multiple-value-bind (order args body)
       (ace.test::parse-deftest-options
-       '(:timeout 5 :order 3 (&optional foo bar baz)
+       '(:order 3 (&optional foo bar baz)
          "a docstring"
          (expect (= 0 0))))
-    (expect (= timeout 5))
     (expect (= order 3))
     (expect (equal args '(&optional foo bar baz)))
     (expect (equal body '("a docstring" (expect (= 0 0)))))))

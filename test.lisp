@@ -18,8 +18,7 @@
   (:import-from #:ace.test.runner
                 #:*unit-tests*
                 #:run-tests
-                #:order
-                #:timeout)
+                #:order)
   #+bordeaux-threads
   (:import-from #:bordeaux-threads #:make-recursive-lock #:with-recursive-lock-held)
   (:export
@@ -53,44 +52,37 @@
 
 ;;; Test utilities.
 
-(defun add-test (name &key order timeout)
+(defun add-test (name &key order)
   "Adds a test with the `NAME' to the list of unit-tests.
 
 Parameters:
  `NAME' the symbol-name of the test.
  `ORDER' is the order parameter on the test used to execute tests in order.
- `TIMEOUT' is the timeout for the test in seconds.
 "
   (declare (symbol name))
   (pushnew name *unit-tests*)
-  (when order (setf (get name 'order) order))
-  (when timeout (setf (get name 'timeout) timeout)))
+  (when order (setf (get name 'order) order)))
 
 (defun parse-deftest-options (options-args-body)
-  "Returns (values order timeout args body) parsed out of OPTIONS-ARGS-BODY."
-  (let ((order t) timeout args body)
+  "Returns (values order args body) parsed out of OPTIONS-ARGS-BODY."
+  (let ((order t) args body)
     (loop :while
           (case (car options-args-body)
             (:order
              (pop options-args-body)
              (setf order (pop options-args-body))
-             t)
-            (:timeout
-             (pop options-args-body)
-             (setf timeout (pop options-args-body))
              t)))
     (setf args (pop options-args-body)
           body options-args-body)
     (check-type args (or null (cons (member &optional &key &rest))))
     (check-type order (or boolean number))
-    (check-type timeout (or null number))
-    (values order timeout args body)))
+    (values order args body)))
 
 (defmacro deftest (name &rest options-args-body)
   "Defines a test named `NAME' as a function. Registers it with other tests.
 
 Parameters:
- `OPTIONS-ARGS-BODY' - [:order ORDER|:timeout TIMEOUT]* (ARGS*) BODY.
+ `OPTIONS-ARGS-BODY' - [:order ORDER]* (ARGS*) BODY.
  `ARGS' is a lambda list with only optional, keyword, or rest arguments.
  `ORDER' indicates controls the order of tests and whether the test can
   run at the same time as other tests.
@@ -101,16 +93,12 @@ Parameters:
    `ORDER' positive: Run one at a time from least-positive to most-positive.
    `ORDER' T: Run one at a time.
 
-  TIMEOUT' specifies the maxim time given to a test in seconds.
-
   A deftest fails if an error is signalled from within."
   (check-type name symbol)
-  (multiple-value-bind (order timeout args body)
+  (multiple-value-bind (order args body)
       (parse-deftest-options options-args-body)
     `(progn
-       (add-test ',name
-                 ,@(when order `(:order ,order))
-                 ,@(when timeout `(:timeout ,timeout)))
+       (add-test ',name ,@(when order `(:order ,order)))
        (defun ,name ,args . ,body))))
 
 (defvar *global-junk* nil "Avoid flushing results in SIGNALS.")
