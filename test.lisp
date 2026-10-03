@@ -17,6 +17,8 @@
   (:use #:cl #:ace.core #:ace.core.macro)
   (:import-from #:ace.test.runner
                 #:*unit-tests*
+                #:assign-test-fixture-functions
+                #:fixture
                 #:run-tests
                 #:order)
   #+bordeaux-threads
@@ -33,6 +35,7 @@
    #:expect-macro-error
    #:expect-warning
    #:expect-macro-warning
+   #:define-test-fixture
    #:deftest
    #:letf*
    ;; Mocking
@@ -52,16 +55,42 @@
 
 ;;; Test utilities.
 
-(defun add-test (name &key order)
+(defvar *fixture-counters*
+  (make-hash-table :test #'equal)
+  "Map of file name to current fixture identifier (small integer)")
+(defun current-fixture-id ()
+  (let* ((file (current-file-namestring))
+         (n (gethash file *fixture-counters*)))
+    (and n (format nil "~@[~A~]_~D" file n))))
+
+(defun add-test (fixture name &key order)
   "Adds a test with the `NAME' to the list of unit-tests.
 
 Parameters:
+ `FIXTURE' is the fixture ID associated with the test.
  `NAME' the symbol-name of the test.
  `ORDER' is the order parameter on the test used to execute tests in order.
 "
   (declare (symbol name))
   (pushnew name *unit-tests*)
-  (when order (setf (get name 'order) order)))
+  (when order (setf (get name 'order) order))
+  (setf (get name 'fixture) fixture))
+
+(defmacro define-test-fixture (&key setup teardown)
+  "Defines SETUP and TEARDOWN hooks for subsequent unit tests in the current file.
+SETUP is evaluated once before the first scheduled test in the fixture group.
+TEARDOWN is evaluated once after the last scheduled test in the fixture group."
+  (let* ((id (let* ((file (current-file-namestring))
+                    (n (incf (gethash file *fixture-counters* 0))))
+               (format nil "~@[~A~]_~D" file n)))
+         (prelude-fn (intern (format nil "~A-PRELUDE" id) *package*))
+         (teardown-fn (intern (format nil "~A-TEARDOWN" id) *package*)))
+    `(progn
+       (defun ,prelude-fn () ,setup)
+       (defun ,teardown-fn () ,teardown)
+       (assign-test-fixture-functions ,id
+                                      ,(and setup `#',prelude-fn)
+                                      ,(and teardown `#',teardown-fn)))))
 
 (defun parse-deftest-options (options-args-body)
   "Returns (values order args body) parsed out of OPTIONS-ARGS-BODY."
@@ -95,10 +124,9 @@ Parameters:
 
   A deftest fails if an error is signalled from within."
   (check-type name symbol)
-  (multiple-value-bind (order args body)
-      (parse-deftest-options options-args-body)
+  (multiple-value-bind (order args body) (parse-deftest-options options-args-body)
     `(progn
-       (add-test ',name ,@(when order `(:order ,order)))
+       (add-test ,(current-fixture-id) ',name ,@(when order `(:order ,order)))
        (defun ,name ,args . ,body))))
 
 (defvar *global-junk* nil "Avoid flushing results in SIGNALS.")

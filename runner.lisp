@@ -14,14 +14,12 @@
 ;;;
 
 (defpackage #:ace.test.runner
-  (:use #:common-lisp #:ace.core)
+  (:use #:common-lisp)
   (:import-from #:ace.core.tty
                 #:ttyp
                 #:*print-ansi*)
   (:import-from #:ace.core.os
                 #:getenv)
-  (:import-from #:ace.core.macro
-                #:eval-always)
   (:import-from #:ace.core.check.condition
                 #:failed
                 #:missed
@@ -37,6 +35,9 @@
    #:deregister-tests
    #:*debug-unit-tests*
    #:default-timeout
+   #:*test-fixtures*
+   #:assign-test-fixture-functions
+   #:fixture
    #:order))
 
 (in-package #:ace.test.runner)
@@ -57,6 +58,15 @@
 (declaim (list *unit-tests*))
 (defvar *unit-tests* nil
   "A list of symbols representing the unit-tests executed with run-tests or check-tests.")
+
+(defvar *test-fixtures* (make-hash-table :test #'equal)
+  "Maps a fixture ID string to (PRELUDE-FN . TEARDOWN-FN) registered by DEFINE-TEST-FIXTURE.")
+
+(defun assign-test-fixture-functions (fixture prelude teardown)
+  "Registers PRELUDE and TEARDOWN functions for FIXTURE."
+  (declare (type string fixture)
+           (type (or null function) prelude teardown))
+  (setf (gethash fixture *test-fixtures*) (cons prelude teardown)))
 
 (declaim (list *failed-conditions*))
 (defvar *failed-conditions* nil
@@ -245,7 +255,9 @@ Returns true if there was no error."
            #+sbcl (sb-ext:*suppress-print-errors* t))
        ,@body)))
 
-(defun run-test (test &key (run (make-test-run :test test)) (debug *debug-unit-tests*))
+(defun run-test (test &key (function (symbol-function test))
+                           (run (make-test-run :test test))
+                           (debug *debug-unit-tests*))
   "Runs a single TEST capturing the output and errors into a test RUN object.
  DEBUG will bring up the debugger in an interactive setting when the test fails.
  Returns the test RUN object for the test."
@@ -280,7 +292,7 @@ Returns true if there was no error."
                        (error #'on-error))
           (loop do
             (with-simple-restart (retry "Retry ~S" test)
-              (return (funcall (symbol-function test))))))
+              (return (funcall function)))))
         (update-test-run run)))))
 
 (defun default-timeout ()
@@ -333,6 +345,20 @@ TEST_SHARD_INDEX are set."
                       :collect test))))
     schedule))
 
+(defun group-tests-by-fixture (schedule)
+  "Groups tests in SCHEDULE by their FIXTURE property, preserving order."
+  (let (groups)
+    (dolist (test schedule)
+      (let* ((fixture (get test 'fixture))
+             (cell (if fixture
+                       (assoc fixture groups :test #'equal)
+                       (and (null (caar groups)) (car groups)))))
+        (if cell
+            (push test (cdr cell))
+            (push (list fixture test) groups))))
+    (loop :for (fixture . rev-tests) :in (nreverse groups)
+          :collect (cons fixture (nreverse rev-tests)))))
+
 (defun %run-tests (&key
                    (debug *debug-unit-tests*)
                    (out *error-output*)
@@ -355,15 +381,34 @@ TEST_SHARD_INDEX are set."
              ;; Evaluates a test-run. Adds failed test to failed-runs.
              (unless (evaluate-test-run run :verbose verbose :output out)
                (push run failed-runs))))
-      (dolist (test schedule)
-        (let ((run (make-test-run
-                    :test test
-                    :output-stream (make-string-output-stream))))
-          (push run all-runs)
-          (when verbose
-            (format out "~&~32/ansi/: Scheduling test: ~A~%" :INFO test))
-          (run-test test :run run :debug debug)
-          (evaluate run)))
+      (loop :for (fixture . tests) :in (group-tests-by-fixture schedule)
+            :for (prelude . teardown) = (and fixture (gethash fixture *test-fixtures*))
+            :do (flet ((run-fixture (fn suffix)
+                         (let* ((pkg (symbol-package (first tests)))
+                                (name (format nil "~A-~A" fixture suffix))
+                                (sym (or (and pkg (find-symbol name pkg))
+                                         (make-symbol name)))
+                                (run (make-test-run
+                                      :test sym
+                                      :output-stream (make-string-output-stream))))
+                           (run-test sym :function fn :run run :debug debug)
+                           (when (test-run-error run)
+                             (push run all-runs)
+                             (evaluate run))
+                           (not (test-run-error run)))))
+                  (when (or (null prelude) (run-fixture prelude "PRELUDE"))
+                    (unwind-protect
+                         (dolist (test tests)
+                           (let ((run (make-test-run
+                                       :test test
+                                       :output-stream (make-string-output-stream))))
+                             (push run all-runs)
+                             (when verbose
+                               (format out "~&~32/ansi/: Scheduling test: ~A~%" :INFO test))
+                             (run-test test :run run :debug debug)
+                             (evaluate run)))
+                      (when teardown
+                        (run-fixture teardown "TEARDOWN"))))))
       ;; Check if any loose thread generated a failed condition.
       (let ((*failed-conditions*
              (with-mutex (*failed-conditions-mutex*)

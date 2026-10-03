@@ -126,7 +126,15 @@
   (assert (= 1 (length *failed-conditions*)))
   (setf *failed-conditions* nil))
 
+(defvar *fixture-events* nil)
+
+(define-test-fixture
+  :setup (push :setup-1 *fixture-events*)
+  :teardown (push :teardown-1 *fixture-events*))
+
 (deftest parse-deftest-options-test ()
+  (when *fixture-events*
+    (expect (equal *fixture-events* '(:setup-1))))
   (multiple-value-bind (order args body)
       (ace.test::parse-deftest-options
        '(:order 3 (&optional foo bar baz)
@@ -135,6 +143,14 @@
     (expect (= order 3))
     (expect (equal args '(&optional foo bar baz)))
     (expect (equal body '("a docstring" (expect (= 0 0)))))))
+
+(define-test-fixture
+  :setup (push :setup-2 *fixture-events*)
+  :teardown (push :teardown-2 *fixture-events*))
+
+(deftest second-fixture-test ()
+  (when *fixture-events*
+    (expect (equal *fixture-events* '(:setup-2 :teardown-1 :setup-1)))))
 
 (defun report-unknown-failures ()
   (let ((dev/null (make-broadcast-stream))
@@ -153,6 +169,7 @@
   (assert (member 'expect-macro-error-test *unit-tests*))
   (assert (member 'assert-macro-error-test *unit-tests*))
   (assert (member 'parse-deftest-options-test *unit-tests*))
+  (assert (member 'second-fixture-test *unit-tests*))
 
   (assert (get 'assert-error-test 'order))
 
@@ -179,10 +196,13 @@
   (letf*-test)
   (report-unknown-failures)
   (parse-deftest-options-test)
+  (second-fixture-test)
 
+  (setf *fixture-events* nil)
   (multiple-value-bind (all failed) (%run-tests :debug nil :verbose t)
     (declare (list all failed))
+    (assert (equal *fixture-events* '(:teardown-2 :setup-2 :teardown-1 :setup-1)))
     (let ((all-count (length all))
           (fail-count (length failed)))
-      (assert (= all-count 12))
+      (assert (= all-count 13))
       (assert (= fail-count 1)))))
