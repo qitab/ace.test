@@ -19,8 +19,7 @@
                 #:*unit-tests*
                 #:assign-test-fixture-functions
                 #:fixture
-                #:run-tests
-                #:order)
+                #:run-tests)
   #+bordeaux-threads
   (:import-from #:bordeaux-threads #:make-recursive-lock #:with-recursive-lock-held)
   (:export
@@ -63,17 +62,15 @@
          (n (gethash file *fixture-counters*)))
     (and n (format nil "~@[~A~]_~D" file n))))
 
-(defun add-test (fixture name &key order)
+(defun add-test (fixture name)
   "Adds a test with the `NAME' to the list of unit-tests.
 
 Parameters:
  `FIXTURE' is the fixture ID associated with the test.
  `NAME' the symbol-name of the test.
- `ORDER' is the order parameter on the test used to execute tests in order.
 "
   (declare (symbol name))
   (pushnew name *unit-tests*)
-  (when order (setf (get name 'order) order))
   (setf (get name 'fixture) fixture))
 
 (defmacro define-test-fixture (&key setup teardown)
@@ -92,41 +89,24 @@ TEARDOWN is evaluated once after the last scheduled test in the fixture group."
                                       ,(and setup `#',prelude-fn)
                                       ,(and teardown `#',teardown-fn)))))
 
-(defun parse-deftest-options (options-args-body)
-  "Returns (values order args body) parsed out of OPTIONS-ARGS-BODY."
-  (let ((order t) args body)
-    (loop :while
-          (case (car options-args-body)
-            (:order
-             (pop options-args-body)
-             (setf order (pop options-args-body))
-             t)))
-    (setf args (pop options-args-body)
-          body options-args-body)
-    (check-type args (or null (cons (member &optional &key &rest))))
-    (check-type order (or boolean number))
-    (values order args body)))
-
-(defmacro deftest (name &rest options-args-body)
+(defmacro deftest (name &rest args-and-body)
   "Defines a test named `NAME' as a function. Registers it with other tests.
 
 Parameters:
- `OPTIONS-ARGS-BODY' - [:order ORDER]* (ARGS*) BODY.
+ `ARGS-AND-BODY' - [:order t] (ARGS*) BODY.
  `ARGS' is a lambda list with only optional, keyword, or rest arguments.
- `ORDER' indicates controls the order of tests and whether the test can
-  run at the same time as other tests.
-
-  Tests are run in the following order:
-   `ORDER' negative: Run one at a time, from most-negative to least-negative.
-   `ORDER' NIL: run in parallel with any other ORDER: NIL tests.
-   `ORDER' positive: Run one at a time from least-positive to most-positive.
-   `ORDER' T: Run one at a time.
 
   A deftest fails if an error is signalled from within."
   (check-type name symbol)
-  (multiple-value-bind (order args body) (parse-deftest-options options-args-body)
+  (when (eq (car args-and-body) :order)
+    (pop args-and-body)
+    (let ((order (pop args-and-body)))
+      (check-type order (eql t))))
+  (let ((args (pop args-and-body))
+        (body args-and-body))
+    (check-type args (or null (cons (member &optional &key &rest))))
     `(progn
-       (add-test ,(current-fixture-id) ',name ,@(when order `(:order ,order)))
+       (add-test ,(current-fixture-id) ',name)
        (defun ,name ,args . ,body))))
 
 (defvar *global-junk* nil "Avoid flushing results in SIGNALS.")

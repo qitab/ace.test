@@ -14,15 +14,14 @@
                 #:*failed-conditions*
                 #:*unit-tests*
                 #:%run-tests
-                #:make-schedule
-                #:order))
+                #:make-schedule))
 
 (cl:in-package #:ace.test-test)
 
 ;;;  CHECK and EXPECT are tested with this functionality.
 ;;;  cllint: disable=invalid-assert
 
-(deftest signalsp-test :order 1 ()
+(deftest signalsp-test ()
   (assert (signalsp warning
             (warn "This warning should be detected")
             (error "The warning has not been detected")))
@@ -33,12 +32,12 @@
   (assert (signalsp simple-error
             (error "This error should be detected"))))
 
-(deftest assert-error-test :order t ()
+(deftest assert-error-test ()
   (assert-error (error "This error should be detected"))
 
   (assert-error (assert-error 'no-op)))
 
-(deftest expect-error-test :order -1 ()
+(deftest expect-error-test ()
   (assert (null *failed-conditions*))
   (expect-error (error "This error should be detected"))
   (assert (null *failed-conditions*))
@@ -51,14 +50,14 @@
 
 (defun plus (a b) (+ a b))
 
-(deftest with-mock-functions-test :order 2 ()
+(deftest with-mock-functions-test ()
   (with-mock-functions
       ((minus (load-time-value #'plus))
        (plus (lambda (a b) (* a b))))
     (expect (= 6 (minus 3 3)))
     (expect (= 9 (plus 3 3)))))
 
-(deftest with-mock-functions-test2 :order 3 ()
+(deftest with-mock-functions-test2 ()
   (with-mock-functions
       ((plus (load-time-value #'minus))
        (minus (lambda (a b) (* a b))))
@@ -68,7 +67,7 @@
 (defvar *foo*)
 (defun (setf foo) (v) (setf *foo* v))
 
-(deftest with-mock-functions-test3 :order 4 ()
+(deftest with-mock-functions-test3 ()
   "Test that with-mock-functions can mock (setf ...) accessors."
   (let (*foo* bar)
     (with-mock-functions (((setf foo) (lambda (v) (setf bar v))))
@@ -76,7 +75,7 @@
       (expect (null *foo*))
       (expect (eq :bar bar)))))
 
-(deftest with-mock-functions-test4 :order 5 ()
+(deftest with-mock-functions-test4 ()
   (let ((real-plus (symbol-function 'plus))
         (real-minus (symbol-function 'minus)))
     (with-mock-functions
@@ -113,6 +112,8 @@
 
 (deftest assert-macro-error-test ()
   (assert-macro-error (accepts-string 10))
+  (assert-macro-error (deftest dummy :order nil ()))
+  (assert-macro-error (deftest dummy :order 1 ()))
   (assert-error
     (assert-macro-error (accetps-string "10"))))
 
@@ -132,17 +133,9 @@
   :setup (push :setup-1 *fixture-events*)
   :teardown (push :teardown-1 *fixture-events*))
 
-(deftest parse-deftest-options-test ()
+(deftest first-fixture-test ()
   (when *fixture-events*
-    (expect (equal *fixture-events* '(:setup-1))))
-  (multiple-value-bind (order args body)
-      (ace.test::parse-deftest-options
-       '(:order 3 (&optional foo bar baz)
-         "a docstring"
-         (expect (= 0 0))))
-    (expect (= order 3))
-    (expect (equal args '(&optional foo bar baz)))
-    (expect (equal body '("a docstring" (expect (= 0 0)))))))
+    (expect (equal *fixture-events* '(:setup-1)))))
 
 (define-test-fixture
   :setup (push :setup-2 *fixture-events*)
@@ -168,10 +161,8 @@
   (assert (member 'assert-failure-test *unit-tests*))
   (assert (member 'expect-macro-error-test *unit-tests*))
   (assert (member 'assert-macro-error-test *unit-tests*))
-  (assert (member 'parse-deftest-options-test *unit-tests*))
+  (assert (member 'first-fixture-test *unit-tests*))
   (assert (member 'second-fixture-test *unit-tests*))
-
-  (assert (get 'assert-error-test 'order))
 
   (format t "RT:~{~&  ~A~%~}" (reverse *unit-tests*))
 
@@ -195,7 +186,7 @@
   (with-mock-functions-test4)
   (letf*-test)
   (report-unknown-failures)
-  (parse-deftest-options-test)
+  (first-fixture-test)
   (second-fixture-test)
 
   (setf *fixture-events* nil)

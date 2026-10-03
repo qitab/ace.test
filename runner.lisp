@@ -37,8 +37,7 @@
    #:default-timeout
    #:*test-fixtures*
    #:assign-test-fixture-functions
-   #:fixture
-   #:order))
+   #:fixture))
 
 (in-package #:ace.test.runner)
 
