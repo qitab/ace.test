@@ -20,8 +20,6 @@
                 #:assign-test-fixture-functions
                 #:fixture
                 #:run-tests)
-  #+bordeaux-threads
-  (:import-from #:bordeaux-threads #:make-recursive-lock #:with-recursive-lock-held)
   (:export
    ;; Testing utilities.
    #:signals
@@ -45,12 +43,6 @@
    #:run-tests))
 
 (in-package #:ace.test)
-
-#+(and sbcl (not bordeaux-threads))
-(progn
-  (defun make-recursive-lock (name) (sb-thread:make-mutex :name name))
-  (defmacro with-recursive-lock-held ((lock) &body body)
-    `(sb-thread:with-recursive-lock (,lock) ,@body)))
 
 ;;; Test utilities.
 
@@ -162,14 +154,11 @@ Example:
 ;;;
 ;;; Convenience for testing bad/unsafe legacy code that depends on global state.
 
-(defvar *unsafe-code-test-mutex* (make-recursive-lock "UNSAFE-CODE-TEST-MUTEX")
-  "Used to serialize tests that mutate global space.")
-
 (defun %with-letf*-bindings (fn revert values)
   (declare (function fn revert) (list values))
-  (with-recursive-lock-held (*unsafe-code-test-mutex*)
-    (unwind-protect (funcall fn)
-      (apply revert values))))
+  ;; Prevent global assignments to random places from background threads
+  (assert (sb-thread:main-thread-p sb-thread:*current-thread*))
+  (unwind-protect (funcall fn) (apply revert values)))
 
 (defmacro letf* (clauses &body body)
   "Sets the places specified in CLAUSES as (place value [old-value])
@@ -177,7 +166,6 @@ to the values for the dynamic scope of LETF* invocation.
 This is reversed thereafter - using the value of PLACE or the OLD-VALUE.
 Note that LETF* has nothing to do with LET* besides syntax.
 E.g. it will not create a new binding as it requires a settable place.
-The execution of LETF* is serialized through *UNSAFE-CODE-TEST-MUTEX*.
 
 WARNING: Use LETF* as a last resort when there is no way to change
 the code and to provide test hooks or proper test interfaces."
@@ -239,8 +227,7 @@ the code and to provide test hooks or proper test interfaces."
         finally (return `(call-with-mocks (lambda () ,@body) ',names ,@mocks)))
   #-sbcl
   (let ((fvars (lmap ((f) bindings) `(,(gensym* f) #',f))))
-    `(with-recursive-lock-held (*unsafe-code-test-mutex*)
-       (let ,fvars ;; Save the functions under gensym vars.
+    `(let ,fvars ;; Save the functions under gensym vars.
          (declare (function ,@(mapcar #'car fvars)))
          ;; Declare the real functions with the specified name (R)
          (flet ,(lconc ((g) fvars) ((f v r) bindings)
@@ -251,7 +238,7 @@ the code and to provide test hooks or proper test interfaces."
            (letf* ,(lmap ((f v) bindings)
                          ((g)   fvars)
                          `((fdefinition ',f) ,v ,g))
-             ,@body))))))
+             ,@body)))))
 
 (defmacro with-mock-functions* (bindings &body body)
   "Executes the BODY with the functions mocked in BINDINGS.
@@ -280,8 +267,9 @@ the code and to provide test hooks or proper test interfaces."
 #+sbcl
 (defun call-with-mocks (thunk names &rest wrappers)
   (sb-int:aver (= (length wrappers) (length names)))
-  (with-recursive-lock-held (*unsafe-code-test-mutex*)
-    (unwind-protect
+  ;; Enforce that mocks are installed only by the aain thread
+  (assert (sb-thread:main-thread-p sb-thread:*current-thread*))
+  (unwind-protect
          (progn
            (mapc (lambda (name wrapper)
                    ;; Prevent mocked mocks. Too confusing who sees what
@@ -290,7 +278,7 @@ the code and to provide test hooks or proper test interfaces."
                  names wrappers)
            (funcall thunk))
       (dolist (name names)
-        (sb-int:unencapsulate name 'mock)))))
+        (sb-int:unencapsulate name 'mock))))
 
 #+sbcl
 (progn
