@@ -21,15 +21,15 @@
 ;;;  CHECK and EXPECT are tested with this functionality.
 ;;;  cllint: disable=invalid-assert
 
-(deftest signalsp-test ()
-  (assert (signalsp warning
+(deftest signals-test ()
+  (assert (signals warning
             (warn "This warning should be detected")
             (error "The warning has not been detected")))
 
   (assert-error
-    (assert (signalsp simple-condition 'no-op)))
+    (assert (signals simple-condition 'no-op)))
 
-  (assert (signalsp simple-error
+  (assert (signals simple-error
             (error "This error should be detected"))))
 
 (deftest assert-error-test ()
@@ -153,7 +153,7 @@
                   :out dev/null :verbose nil)))))
 
 (defun %main ()
-  (assert (member 'signalsp-test *unit-tests*))
+  (assert (member 'signals-test *unit-tests*))
   (assert (member 'expect-error-test *unit-tests*))
   (assert (member 'assert-error-test *unit-tests*))
   (assert (member 'assert-failure-test *unit-tests*))
@@ -171,7 +171,7 @@
 
   ;; Need to call all the test here since not using the runner.
 
-  (signalsp-test)
+  (signals-test)
   (expect-error-test)
   (assert-error-test)
   (expect-macro-error-test)

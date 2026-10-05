@@ -6,7 +6,7 @@
 
 ;;; Simple utils to define unit tests.
 ;;;
-;;; signalsp - returns a signaled condition of specified type or nil.
+;;; signals - returns a signaled condition of specified type or nil.
 ;;; assert-error - asserts that a form will signal an error.
 ;;; macro-error - returns an error cased by macroexpanding a form or nil.
 ;;; assert-macro-error - asserts that a form signals an error at macroexpansion time.
@@ -23,7 +23,6 @@
   (:export
    ;; Testing utilities.
    #:signals
-   #:signalsp
    #:check
    #:expect
    #:assert-error
@@ -111,14 +110,6 @@ Example:
        (let ((len (length results)))
          (setf *global-junk* len)
          nil))))
-
-;; TODO(czak): Remove.
-(defmacro signalsp (condition &body body)
-  "True if the BODY signals a subtype of CONDITION.
-
- Example:
-  (assert (signalsp warning (warn \"This warning should be detected\")))"
-  `(signals ,condition ,@body))
 
 (defmacro assert-error (&body body)
   "Asserts that execution of the BODY causes an error."
