@@ -7,7 +7,6 @@
 ;;; The test runner runs //lisp/test ace.test.deftest tests.
 ;;;
 ;;; run-tests - will run all the tests and return whether tests pass.
-;;; deregister-tests - removes unit tests from the active list based on a selector.
 ;;;
 ;;; This package contains an implementation of unit test runner.
 ;;; RUN-TESTS is the function invoked to run tests.
@@ -26,13 +25,13 @@
                 #:*on-missed-expectation*)
   (:export
    ;; Execution of tests.
+   #:*unit-tests*
    #:*failed-conditions*
    #:failed-conditions
    #:make-schedule
    #:run-tests
    #:*reporting-hooks*
    #:run-and-report-tests
-   #:deregister-tests
    #:*debug-unit-tests*
    #:default-timeout
    #:*test-fixtures*
@@ -476,33 +475,3 @@ TEST_SHARD_INDEX are set."
     ;; but we've seen ASAN complains anyway as it requires lots of other help.
     ;; So probably just remove this after further testing.
     (trivial-garbage:gc :full t)))
-
-(defun deregister-tests (&optional (select :all))
-  "Deregister unit-tests. The tests selected will no longer be run by RUN-TESTS or CHECK-TESTS.
- SELECT determines which tests will be removed from the unit-tests list:
-   :all        - all tests,
-   :package    - tests from the current package,
-   :other      - tests from other packages,
-   :null       - tests without a package,
-   :fail       - tests that fail.
-   :pass       - tests that pass.
-   <package>   - tests from the package specified.
-   <predicate> - tests for which the predicate returns true.
- Returns the remaining registered tests."
-  (let ((package *package*)
-        (predicate nil))
-    (typecase select
-      (package  (shiftf package select :package))
-      (function (shiftf predicate select :predicate)))
-    (labels ((failp (test)
-               (test-run-error (run-test test :debug nil)))
-             (filter (test)
-               (ecase select
-                 (:all       t)
-                 (:package   (eq (symbol-package test) package))
-                 (:predicate (funcall predicate test))
-                 (:other     (not (eq (symbol-package test) package)))
-                 (:null      (null (symbol-package test)))
-                 (:fail      (failp test))
-                 (:pass      (not (failp test))))))
-       (setf *unit-tests* (delete-if #'filter *unit-tests*)))))
