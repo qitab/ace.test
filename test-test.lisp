@@ -112,8 +112,6 @@
 
 (deftest assert-macro-error-test ()
   (assert-macro-error (accepts-string 10))
-  (assert-macro-error (deftest dummy :order nil ()))
-  (assert-macro-error (deftest dummy :order 1 ()))
   (assert-error
     (assert-macro-error (accetps-string "10"))))
 

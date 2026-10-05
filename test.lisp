@@ -81,25 +81,18 @@ TEARDOWN is evaluated once after the last scheduled test in the fixture group."
                                       ,(and setup `#',prelude-fn)
                                       ,(and teardown `#',teardown-fn)))))
 
-(defmacro deftest (name &rest args-and-body)
+(defmacro deftest (name args &body body)
   "Defines a test named `NAME' as a function. Registers it with other tests.
 
 Parameters:
- `ARGS-AND-BODY' - [:order t] (ARGS*) BODY.
  `ARGS' is a lambda list with only optional, keyword, or rest arguments.
 
   A deftest fails if an error is signalled from within."
   (check-type name symbol)
-  (when (eq (car args-and-body) :order)
-    (pop args-and-body)
-    (let ((order (pop args-and-body)))
-      (check-type order (eql t))))
-  (let ((args (pop args-and-body))
-        (body args-and-body))
-    (check-type args (or null (cons (member &optional &key &rest))))
-    `(progn
-       (add-test ,(current-fixture-id) ',name)
-       (defun ,name ,args . ,body))))
+  (check-type args (or null (cons (member &optional &key &rest))))
+  `(progn
+     (add-test ,(current-fixture-id) ',name)
+     (defun ,name ,args . ,body)))
 
 (defvar *global-junk* nil "Avoid flushing results in SIGNALS.")
 
