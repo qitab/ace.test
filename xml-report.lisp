@@ -67,11 +67,6 @@
               (esc (first p)) (esc (second p))))
     (format out "~&  </properties>~%")))
 
-(defun test-package-name (test-status)
-  "Returns the package name in which the `TEST-STATUS' was defined."
-  (let ((package (symbol-package (test-run-test test-status))))
-    (and package (package-name package))))
-
 (defun print-condition (condition out &key (as :failure) trace)
   "Prints the CONDITION to OUT as an XML failure or error depending on AS parameter.
  `TRACE' of the stack will be printed if given."
@@ -97,7 +92,7 @@
       (let ((di (sb-kernel:%code-debug-info (sb-kernel:fun-code-header fun))))
         (sb-c::debug-source-namestring (sb-c::compiled-debug-info-source di))))))
 
-(defun print-test-case (status &key (out *standard-output*))
+(defun print-test-case (status out)
   "Print a test case from the test `STATUS' information to the stream `OUT'."
   (with-accessors ((test              test-run-test)
                    (error             test-run-error)
@@ -129,17 +124,8 @@
                     out))
       (format out "~&  </testcase>~%"))))
 
-(defun print-test-cases (test-cases &key (out *standard-output*))
-  "Prints the `TEST-CASES' to the `OUT' stream."
-  (dolist (test test-cases)
-    (print-test-case test :out out)))
-
-(defun print-test-suite (name test-cases &key
-                                         (print-function #'print-test-cases)
-                                         (out *standard-output*))
-  "Print `TEST-CASES' to the stream `OUT' as a JUnit test suite with the NAME.
-   The `TEST-CASES' are a list of test.runner STATUS objects.
-   Calls `PRINT-FUNCTION' on the cases after printing the test suite header and before the footer."
+(defun print-test-suite (name test-cases out)
+  "Print `TEST-CASES' to the stream `OUT' as a JUnit test suite with the NAME."
   (with-sane-io-syntax
     (let ((failure-count (count-if #'test-run-failed-conditions test-cases))
           (error-count
@@ -150,25 +136,9 @@
       (format
        out "~&<testsuite name=\"~A\" tests=\"~D\" failures=\"~D\" errors=\"~D\" time=\"~F\">~%"
        (esc name) (length test-cases) failure-count error-count total-time)
-      (funcall print-function test-cases :out out)
+      (dolist (test test-cases)
+        (print-test-case test out))
       (format out "~&</testsuite>~%"))))
-
-(defun group-and-print-test-cases (test-cases &key
-                                             (key #'test-package-name)
-                                             (test #'eq)
-                                             (default "unknown")
-                                             (print-function #'print-test-suite)
-                                             (out *standard-output*))
-  "Groups the `TEST-CASES' and calls `PRINT-FUNCTION' on the `OUT' stream.
- The group function used is specified by the `KEY' parameter.
- `TEST' is used to compare the keys. `DEFAULT' is used if `KEY' returns NIL."
-  (declare (function print-function test key))
-  (let ((table (make-hash-table :test test)))
-    (dolist (status test-cases)
-      (push status (gethash (or (funcall key status) default) table)))
-    (maphash (lambda (key test-cases)
-               (funcall print-function key test-cases :out out))
-             table)))
 
 (defun print-tests-report (test-cases out)
   "Prints the TEST-CASES' status objects to the OUT stream as a JUnit XML test report."
@@ -176,7 +146,13 @@
   (let ((program (or #+sbcl (pathname-name (first sb-unix::*posix-argv*)) "")))
     (format out "~&<testsuites name=\"~A\" tests=\"~D\">~%"
             (esc program) (length test-cases)))
-  (group-and-print-test-cases test-cases :key #'test-package-name :out out)
+  (let ((table (make-hash-table :test #'eq)))
+    (dolist (status test-cases)
+      (let ((package (symbol-package (test-run-test status))))
+        (push status (gethash (or (and package (package-name package)) "unknown") table))))
+    (maphash (lambda (key cases)
+               (print-test-suite key cases out))
+             table))
   (format out "~&</testsuites>~%"))
 
 (defun dump-junit-xml-output (test-cases &key &allow-other-keys)
