@@ -152,18 +152,10 @@ Each BINDING is a
   (function-name (lambda (...) ...) [real]) or
   (function-name #'mock [real]).
 
+WITH-MOCK-FUNCTIONS overrides the function definition temporarily.
 If a REAL symbol is provided with the binding, it is bound to the real function
 within the mock-bindings and within body. This allows the mock functions to
 call into the real functions.
-
-WITH-MOCK-FUNCTIONS is protected by a recursive mutex and runs serially
-wrt. other WITH-MOCK-FUNCTIONS.
-
-Note that WITH-MOCK-FUNCTIONS overrides the function definition temporarily.
-In SBCL the override may not be propagated to all threads in a timely manner.
-I.e. access to a function definition is not atomic or synchronized
-and your tests will be flaky if you expect that other running threads will
-pick up the changes in a timely manner magically.
 
 Use WITH-MOCK-FUNCTIONS as a last resort when there is no way to change
 the code and to provide test hooks or proper test interfaces."
