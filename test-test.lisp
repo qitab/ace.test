@@ -106,25 +106,6 @@
   ;; Intentionally errors out.
   (check (not "EVER-PASSES")))
 
-(defmacro accepts-string (a)
-  (check-type a string)
-  `(format nil "*~A*" ,a))
-
-(deftest assert-macro-error-test ()
-  (assert-macro-error (accepts-string 10))
-  (assert-error
-    (assert-macro-error (accetps-string "10"))))
-
-(deftest expect-macro-error-test ()
-  (assert (null *failed-conditions*))
-  ;; Intentionally errors out.
-  (expect-macro-error (accepts-string "10"))
-  (assert (= 1 (length *failed-conditions*)))
-  (expect-macro-error (accepts-string 10))
-  ;; Retained the value.
-  (assert (= 1 (length *failed-conditions*)))
-  (setf *failed-conditions* nil))
-
 (defvar *fixture-events* nil)
 
 (define-test-fixture
@@ -157,8 +138,6 @@
   (assert (member 'expect-error-test *unit-tests*))
   (assert (member 'assert-error-test *unit-tests*))
   (assert (member 'assert-failure-test *unit-tests*))
-  (assert (member 'expect-macro-error-test *unit-tests*))
-  (assert (member 'assert-macro-error-test *unit-tests*))
   (assert (member 'first-fixture-test *unit-tests*))
   (assert (member 'second-fixture-test *unit-tests*))
 
@@ -174,8 +153,6 @@
   (signals-test)
   (expect-error-test)
   (assert-error-test)
-  (expect-macro-error-test)
-  (assert-macro-error-test)
   (assert-error
     (assert-failure-test))
   (with-mock-functions-test)
@@ -193,5 +170,5 @@
     (assert (equal *fixture-events* '(:teardown-2 :setup-2 :teardown-1 :setup-1)))
     (let ((all-count (length all))
           (fail-count (length failed)))
-      (assert (= all-count 13))
+      (assert (= all-count 11))
       (assert (= fail-count 1)))))

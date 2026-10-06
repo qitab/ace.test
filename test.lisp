@@ -8,8 +8,6 @@
 ;;;
 ;;; signals - returns a signaled condition of specified type or nil.
 ;;; assert-error - asserts that a form will signal an error.
-;;; macro-error - returns an error cased by macroexpanding a form or nil.
-;;; assert-macro-error - asserts that a form signals an error at macroexpansion time.
 ;;; deftest - has a defun like signal and registers the function as unit test.
 ;;;
 
@@ -26,11 +24,8 @@
    #:check
    #:expect
    #:assert-error
-   #:assert-macro-error
    #:expect-error
-   #:expect-macro-error
    #:expect-warning
-   #:expect-macro-warning
    #:define-test-fixture
    #:deftest
    #:letf*
@@ -122,18 +117,6 @@ Example:
 (defmacro expect-warning (&body body)
   "Expects that execution of the BODY causes an error."
   `(expect (signals warning ,@body)))
-
-(defmacro assert-macro-error (body)
-  "Asserts that macroexpansion of the BODY results in an ERROR."
-  `(assert-error (macroexpand* ',body)))
-
-(defmacro expect-macro-error (body)
-  "Expects that macroexpansion of the BODY results in an ERROR."
-  `(expect-error (macroexpand* ',body)))
-
-(defmacro expect-macro-warning (body)
-  "Expects that macroexpansion of the BODY results in an ERROR."
-  `(expect-warning (macroexpand* ',body)))
 
 ;;;
 ;;; Convenience for testing bad/unsafe legacy code that depends on global state.
