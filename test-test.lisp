@@ -26,23 +26,16 @@
             (warn "This warning should be detected")
             (error "The warning has not been detected")))
 
-  (assert-error
-    (assert (signals simple-condition 'no-op)))
+  (assert (signals error
+            (assert (signals simple-condition 'no-op))))
 
   (assert (signals simple-error
             (error "This error should be detected"))))
-
-(deftest assert-error-test ()
-  (assert-error (error "This error should be detected"))
-
-  (assert-error (assert-error 'no-op)))
 
 (deftest expect-error-test ()
   (assert (null *failed-conditions*))
   (expect-error (error "This error should be detected"))
   (assert (null *failed-conditions*))
-
-  (expect-error (assert-error 'no-op))
 
   (expect-error (error "An expected error.")))
 
@@ -136,7 +129,6 @@
 (defun %main ()
   (assert (member 'signals-test *unit-tests*))
   (assert (member 'expect-error-test *unit-tests*))
-  (assert (member 'assert-error-test *unit-tests*))
   (assert (member 'assert-failure-test *unit-tests*))
   (assert (member 'first-fixture-test *unit-tests*))
   (assert (member 'second-fixture-test *unit-tests*))
@@ -152,9 +144,8 @@
 
   (signals-test)
   (expect-error-test)
-  (assert-error-test)
-  (assert-error
-    (assert-failure-test))
+  (assert (signals error
+            (assert-failure-test)))
   (with-mock-functions-test)
   (with-mock-functions-test2)
   (with-mock-functions-test3)
@@ -170,5 +161,5 @@
     (assert (equal *fixture-events* '(:teardown-2 :setup-2 :teardown-1 :setup-1)))
     (let ((all-count (length all))
           (fail-count (length failed)))
-      (assert (= all-count 11))
+      (assert (= all-count 10))
       (assert (= fail-count 1)))))

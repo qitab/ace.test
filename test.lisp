@@ -7,7 +7,6 @@
 ;;; Simple utils to define unit tests.
 ;;;
 ;;; signals - returns a signaled condition of specified type or nil.
-;;; assert-error - asserts that a form will signal an error.
 ;;; deftest - has a defun like signal and registers the function as unit test.
 ;;;
 
@@ -23,7 +22,6 @@
    #:signals
    #:check
    #:expect
-   #:assert-error
    #:expect-error
    #:expect-warning
    #:define-test-fixture
@@ -105,10 +103,6 @@ Example:
        (let ((len (length results)))
          (setf *global-junk* len)
          nil))))
-
-(defmacro assert-error (&body body)
-  "Asserts that execution of the BODY causes an error."
-  `(check (signals error ,@body)))
 
 (defmacro expect-error (&body body)
   "Expects that execution of the BODY causes an error."
