@@ -104,9 +104,7 @@
   (failed-conditions nil :type list)
   ;; Execution timing.
   (real-time-start 0 :type integer)
-  (real-time-stop -1 :type integer)
-  (run-time-start 0 :type integer)
-  (run-time-stop -1 :type integer))
+  (real-time-stop -1 :type integer))
 
 (defun test-run-real-time (run)
   "Returns the elapsed test RUN real time for the test in seconds or NIL."
@@ -114,21 +112,13 @@
          (- (test-run-real-time-stop run) (test-run-real-time-start run))))
     (float (/ real-time-ticks internal-time-units-per-second))))
 
-(defun test-run-run-time (run)
-  "Returns the elapsed test RUN run time for the test in seconds or NIL."
-  (let ((run-time-ticks
-         (- (test-run-run-time-stop run) (test-run-run-time-start run))))
-    (float (/ run-time-ticks internal-time-units-per-second))))
-
 (defun test-run-start-time (run)
-  "Set the start times on the test RUN."
-  (setf (test-run-run-time-start run) (get-internal-run-time)
-        (test-run-real-time-start run) (get-internal-real-time)))
+  "Set the start time on the test RUN."
+  (setf (test-run-real-time-start run) (get-internal-real-time)))
 
 (defun test-run-stop-time (run)
-  "Set the stop times on the test RUN."
-  (setf (test-run-run-time-stop run) (get-internal-run-time)
-        (test-run-real-time-stop run) (get-internal-real-time)))
+  "Set the stop time on the test RUN."
+  (setf (test-run-real-time-stop run) (get-internal-real-time)))
 
 (defmethod print-object ((run test-run) stream)
   "Prints a test RUN object to the STREAM."
