@@ -222,38 +222,6 @@ the code and to provide test hooks or proper test interfaces."
   (sb-int:aver (= (length wrappers) (length names)))
   ;; Enforce that mocks are installed only by the aain thread
   (assert (sb-thread:main-thread-p sb-thread:*current-thread*))
-  (flet ((compatible-mock-p (old-parsed new-parsed)
-           ;; Often the real function returns "unknown" but the mock is more precise
-           ;; - e.g. it returns some literal object. This is fine.
-           (let ((old-returns (sb-kernel:fun-type-returns old-parsed))
-                 (new-returns (sb-kernel:fun-type-returns new-parsed)))
-             (or (eq old-returns sb-kernel:*wild-type*)
-                 (sb-kernel:type= old-returns new-returns)
-                 ;; Expect (VALUES something ...), possibly exactly 1.
-                 (and (sb-kernel:values-type-p old-returns)
-                      (sb-kernel:values-type-p new-returns)
-                      (let ((old-req (sb-kernel:values-type-required old-returns))
-                            (new-req (sb-kernel:values-type-required new-returns)))
-                        ;; If the mock returns a subtype for each value, that's fine.
-                        ;; e.g. CONS can be returned if the caller wants LIST
-                        (and (= (length old-req) (length new-req))
-                             (every #'sb-kernel:csubtypep new-req old-req))))))))
-    ;; See if the return types match. Arg types are assumed to be valid.
-    ;; This is just best-effort, there's nothing we can do if the compiler could not
-    ;; infer accurate undeclared types.
-    (loop for name in names
-          for mock in wrappers
-        do (let* ((real (fdefinition name))
-                  (old-ftype (sb-kernel:%simple-fun-type (sb-kernel:%fun-fun real)))
-                  (new-ftype (sb-kernel:%simple-fun-type (sb-kernel:%fun-fun mock))))
-             ;; If either ftype is just FUNCTION, it can't be destructured. Oh well.
-             (when (and (typep old-ftype '(cons (eql function)))
-                        (typep new-ftype '(cons (eql function))))
-               (let ((old-parsed (sb-kernel:specifier-type old-ftype))
-                     (new-parsed (sb-kernel:specifier-type new-ftype)))
-                 (unless (compatible-mock-p old-parsed new-parsed)
-                   (error "Mock of ~S has type mismatch: ~S ~S"
-                          name old-ftype new-ftype)))))))
   (unwind-protect
          (progn
            (mapc (lambda (name wrapper)

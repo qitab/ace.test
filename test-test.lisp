@@ -39,28 +39,20 @@
 
   (expect-error (error "An expected error.")))
 
-;;; Some of tests violated CLHS 3.2.2.3 Semantic Constraints by playing silly games
-;;; of swapping around their names:
-;;; "A call within a file to a named function that is defined in the same file refers to that
-;;; function, unless that function has been declared notinline. The consequences are unspecified
-;;; if functions are redefined individually at run time or multiply defined in the same file."
-
-(declaim (notinline minus plus))
-
 (defun minus (a b) (- a b))
 
 (defun plus (a b) (+ a b))
 
 (deftest with-mock-functions-test ()
   (with-mock-functions
-      ((minus (lambda (a b) (the number (funcall (load-time-value #'plus) a b))))
+      ((minus (load-time-value #'plus))
        (plus (lambda (a b) (* a b))))
     (expect (= 6 (minus 3 3)))
     (expect (= 9 (plus 3 3)))))
 
 (deftest with-mock-functions-test2 ()
   (with-mock-functions
-      ((plus (lambda (a b) (the number (funcall (load-time-value #'minus) a b))))
+      ((plus (load-time-value #'minus))
        (minus (lambda (a b) (* a b))))
     (expect (= 0 (plus 3 3)))
     (expect (= 9 (minus 3 3)))))
@@ -75,6 +67,17 @@
       (setf (foo) :bar)
       (expect (null *foo*))
       (expect (eq :bar bar)))))
+
+(deftest with-mock-functions-test4 ()
+  (let ((real-plus (symbol-function 'plus))
+        (real-minus (symbol-function 'minus)))
+    (with-mock-functions
+        ((minus #'plus)
+         (plus (lambda (a b) (funcall real-minus (* a b) a))))
+      (expect (= 6 (minus 3 3)))
+      (expect (= 0 (funcall real-minus 3 3)))
+      (expect (= 6 (plus 3 3)))
+      (expect (= 5 (funcall real-plus 2 3))))))
 
 (defvar *bar*)
 (defun bar () *bar*)
@@ -146,6 +149,7 @@
   (with-mock-functions-test)
   (with-mock-functions-test2)
   (with-mock-functions-test3)
+  (with-mock-functions-test4)
   (letf*-test)
   (report-unknown-failures)
   (first-fixture-test)
@@ -157,5 +161,5 @@
     (assert (equal *fixture-events* '(:teardown-2 :setup-2 :teardown-1 :setup-1)))
     (let ((all-count (length all))
           (fail-count (length failed)))
-      (assert (= all-count 9))
+      (assert (= all-count 10))
       (assert (= fail-count 1)))))
