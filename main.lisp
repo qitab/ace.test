@@ -32,7 +32,7 @@
                (format *error-output* "INFO: The test is about to timeout.~%")
                #+(and sbcl x86-64)
                (let ((*print-pretty* nil))
-                 (dolist (pair (sb-debug:backtrace-all-threads))
+                 (dolist (pair (sb-debug::backtrace-all-threads))
                    ;; No need for a backtrace of the timeout watcher
                    (unless (eq (car pair) sb-thread:*current-thread*)
                      (format *debug-io* "~&Backtrace for ~A:~%~A~%" (car pair) (cdr pair)))))))
