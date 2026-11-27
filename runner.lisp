@@ -19,7 +19,7 @@
                 #:*print-ansi*)
   (:import-from #:ace.core.os
                 #:getenv)
-  (:import-from #:ace.core.check.condition
+  (:import-from #:ace.core.check
                 #:failed
                 #:missed
                 #:*on-missed-expectation*)
